@@ -24,6 +24,13 @@
 .score-number small{font-size:11px}
 .score-empty{grid-column:1/-1;align-self:center;color:var(--muted)}
 dialog .table-wrap{max-height:65dvh}
+.race-summary{display:grid;gap:4px}
+.lap-counter{display:flex;align-items:center;gap:8px;margin-left:auto}
+.lap-counter button{min-width:76px;min-height:48px;background:#263301;color:#fff;border-color:#263301;padding:5px 10px;white-space:nowrap}
+.lap-counter button:focus-visible{outline-color:#192300}
+.lap-counter output{min-width:76px;text-align:center;font-size:clamp(21px,3vw,30px);line-height:1.12;font-variant-numeric:tabular-nums}
+.lap-counter output small{display:block;color:inherit;font-size:12px;margin-bottom:3px}
+@media(max-width:640px){.lap-counter{margin-left:0}}
 @media(max-width:640px){.score-grid{grid-template-columns:repeat(2,minmax(0,1fr));min-height:102px}}
 @media print{.scoreboard{display:none}}
 </style>
@@ -31,7 +38,14 @@ dialog .table-wrap{max-height:65dvh}
 <body>
 <main>
 <header><div><h1>場地自由車計分台</h1><p class="sub" id="raceInfo"></p></div><div class="actions"><button id="setupOpen">賽事設定</button><button id="historyOpen">記錄</button><button id="export">匯出 CSV</button></div></header>
-<div class="racebar"><strong id="next"></strong><span id="instruction"></span></div>
+<div class="racebar">
+  <div class="race-summary"><strong id="next"></strong><span id="instruction"></span></div>
+  <div class="lap-counter" role="group" aria-label="現場圈數">
+    <button id="lapDecrease" type="button">−1 圈</button>
+    <output aria-live="polite"><small id="lapLabel"></small><span id="lapDisplay"></span></output>
+    <button id="lapIncrease" type="button">＋1 圈</button>
+  </div>
+</div>
 <section id="scoreboard" class="panel scoreboard" aria-labelledby="scoreTitle">
 <div class="section-head"><div><h2 id="scoreTitle">即時積分總覽</h2><small id="scoreContext"></small></div><button id="scoreOpen">全體排名</button></div>
 <ol id="scoreLeaders" class="score-grid"></ol>
@@ -181,6 +195,17 @@ function renderScoreboard(riders, { points, schedule }, pending) {
   $("allScoresTitle").textContent = $("resultTitle").textContent === "成績" ? "全體成績" : "全體即時積分";
 }
 
+function lapCount() {
+  return race.lapCount ?? (race.type === "points" ? race.laps : 0);
+}
+
+function changeLapCount(delta) {
+  const max = race.type === "points" ? race.laps : Infinity;
+  race.lapCount = Math.max(0, Math.min(max, lapCount() + delta));
+  persist();
+  render();
+}
+
 function render() {
   const context = getContext();
   const { points, round, schedule, remaining, ended } = context;
@@ -191,11 +216,16 @@ function render() {
   const labelsByMode = { round: "本輪輸入", plus: "得圈選手", minus: "失圈選手", finish: "終點順序" };
   $("raceInfo").textContent = race.name + "・" + labels[race.type] + "・" + race.track + " m";
   $("next").textContent = points
-    ? (ended ? "已記到終點" : "剩 " + (race.laps - schedule[round - 1]) + " 圈")
+    ? (ended ? "已記到終點" : "下一次衝刺 · 剩 " + (race.laps - schedule[round - 1]) + " 圈")
     : (ended ? "淘汰賽已結束" : "剩 " + remaining + " 人");
   $("instruction").textContent = points
     ? (ended ? (pending ? "有待補的衝刺紀錄" : "可補登終點順序") : "第 " + round + " 次衝刺 · 完成第 " + schedule[round - 1] + " 圈")
     : (ended ? "已記錄決勝順序" : remaining === 2 ? "最後兩人決勝" : "第 " + round + " 輪 · 每 " + (race.track === "250" ? 2 : 1) + " 圈淘汰");
+  const lapsOnBoard = lapCount();
+  $("lapLabel").textContent = points ? "現場剩餘" : "已騎圈數";
+  $("lapDisplay").textContent = lapsOnBoard + " 圈";
+  $("lapDecrease").disabled = lapsOnBoard === 0;
+  $("lapIncrease").disabled = points && lapsOnBoard === race.laps;
   $("fieldCount").textContent = race.roster.length + " 人名單";
   $("selectionTitle").textContent = editIndex === null ? labelsByMode[mode] : "補記第 " + race.events[editIndex].round + " 次衝刺";
   $("picked").textContent = selected.length ? selected.map(bib => {
@@ -305,6 +335,8 @@ function parseRoster(text) {
   }).filter(Boolean).sort((a, b) => Number(a.bib) - Number(b.bib));
 }
 
+$("lapDecrease").onclick = () => changeLapCount(-1);
+$("lapIncrease").onclick = () => changeLapCount(1);
 $("scoreOpen").onclick = () => $("allScores").showModal();
 $("setupOpen").onclick = () => {
   $("raceName").value = race.name; $("type").value = race.type; $("track").value = race.track;
