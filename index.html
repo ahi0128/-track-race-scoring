@@ -64,14 +64,33 @@ dialog .table-wrap{max-height:65dvh}
 const key = "track-race-scoring-v1";
 const labels = { points: "領先計分", elimination: "落後淘汰" };
 const $ = id => document.getElementById(id);
-const demoRoster = Array.from({ length: 20 }, (_, i) => ({
-  bib: String(i + 1).padStart(2, "0"), name: "示範 " + (i + 1), team: i < 10 ? "練習 A 隊" : "練習 B 隊", country: ""
+const demoNames = [
+  "林昱安", "陳語晴", "張柏睿", "黃品妍", "李承恩", "王芷寧", "吳奕辰", "劉書瑤", "蔡彥廷", "許映彤",
+  "鄭凱文", "謝予涵", "郭宥廷", "洪子晴", "曾冠宇", "邱昕妤", "廖禹翔", "賴可晨", "何俊熙", "蘇采庭"
+];
+const demoRoster = demoNames.map((name, index) => ({
+  bib: String(index + 1).padStart(2, "0"),
+  name,
+  team: String.fromCharCode(65 + Math.floor(index / 2)) + " 隊",
+  country: ""
 }));
+
+function isPreviousDemoRoster(roster) {
+  return roster.length === demoRoster.length && roster.every((rider, index) =>
+    rider?.bib === demoRoster[index].bib &&
+    rider.name === "示範 " + (index + 1) &&
+    rider.team === (index < 10 ? "練習 A 隊" : "練習 B 隊") &&
+    rider.country === ""
+  );
+}
 const initialRace = () => ({ name: "場地模擬賽", type: "points", track: "250", laps: 40, roster: demoRoster, events: [] });
 let race = initialRace();
 try {
   const stored = JSON.parse(localStorage.getItem(key));
-  if (stored?.roster?.length && Array.isArray(stored.events) && labels[stored.type]) race = stored;
+  if (stored?.roster?.length && Array.isArray(stored.events) && labels[stored.type]) {
+    race = stored;
+    if (isPreviousDemoRoster(stored.roster)) race.roster = demoRoster;
+  }
 } catch {}
 let selected = [];
 let mode = "round";
