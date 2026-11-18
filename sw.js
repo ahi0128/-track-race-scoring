@@ -1,4 +1,4 @@
-const cacheName = "track-race-scoring-shell-v7";
+const cacheName = "track-race-scoring-shell-v8";
 const shell = new URL("./", self.registration.scope).href;
 const importer = new URL("photo-import.js?v=20261118-4", shell).href;
 
