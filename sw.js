@@ -1,24 +1,25 @@
-const cacheName = "track-race-scoring-shell-v3";
+const cacheName = "track-race-scoring-shell-v4";
 const shell = new URL("./", self.registration.scope).href;
+const importer = new URL("photo-import.js", shell).href;
 
 self.addEventListener("install", event => {
-  event.waitUntil(caches.open(cacheName).then(cache => cache.add(shell)).then(() => self.skipWaiting()));
+  event.waitUntil(caches.open(cacheName).then(cache => cache.addAll([shell, importer])).then(() => self.skipWaiting()));
 });
-
 self.addEventListener("activate", event => {
   event.waitUntil(Promise.all([
     self.clients.claim(),
     caches.keys().then(keys => Promise.all(keys.filter(key => key.startsWith("track-race-scoring-shell-") && key !== cacheName).map(key => caches.delete(key))))
   ]));
 });
-
 self.addEventListener("fetch", event => {
-  if (event.request.mode !== "navigate" || !event.request.url.startsWith(shell)) return;
+  const navigation = event.request.mode === "navigate" && event.request.url.startsWith(shell);
+  if (!navigation && event.request.url !== importer) return;
+  const cacheKey = navigation ? shell : importer;
   event.respondWith(fetch(event.request).then(async response => {
-    if (response.ok && response.headers.get("content-type")?.includes("text/html")) {
+    if (response.ok) {
       const cache = await caches.open(cacheName);
-      await cache.put(shell, response.clone());
+      await cache.put(cacheKey, response.clone());
     }
     return response;
-  }).catch(() => caches.match(shell).then(response => response || Response.error())));
+  }).catch(() => caches.match(cacheKey).then(response => response || Response.error())));
 });
