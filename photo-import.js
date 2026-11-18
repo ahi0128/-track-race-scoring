@@ -88,6 +88,27 @@ function photoRosterFromTsv(tsv, width, columns, international = false) {
     });
     return libraryPromise;
   }
+  function recognitionImage() {
+    const image = document.createElement("canvas");
+    image.width = canvas.width;
+    image.height = canvas.height;
+    const context = image.getContext("2d", { willReadFrequently: true });
+    context.drawImage(canvas, 0, 0);
+    const pixels = context.getImageData(0, 0, image.width, image.height);
+    let low = 255, high = 0;
+    for (let i = 0; i < pixels.data.length; i += 4) {
+      const gray = Math.round(.299 * pixels.data[i] + .587 * pixels.data[i + 1] + .114 * pixels.data[i + 2]);
+      pixels.data[i] = gray;
+      low = Math.min(low, gray);
+      high = Math.max(high, gray);
+    }
+    for (let i = 0; i < pixels.data.length; i += 4) {
+      const gray = (pixels.data[i] - low) * 255 / Math.max(1, high - low);
+      pixels.data[i] = pixels.data[i + 1] = pixels.data[i + 2] = gray;
+    }
+    context.putImageData(pixels, 0, 0);
+    return image;
+  }
   async function chooseFile(event) {
     const file = event.target.files[0];
     event.target.value = "";
@@ -150,7 +171,7 @@ function photoRosterFromTsv(tsv, width, columns, international = false) {
         if (token !== generation) { await created.terminate(); return; }
         worker = created;
         await worker.setParameters({ tessedit_pageseg_mode: "6", preserve_interword_spaces: "1" });
-        return worker.recognize(canvas, {}, { text: true, tsv: true });
+        return worker.recognize(recognitionImage(), {}, { text: true, tsv: true });
       })();
       const result = await Promise.race([operation, new Promise((_, reject) => {
         timeout = setTimeout(() => reject(new Error("辨識逾時，請確認連線並用較清晰的照片重試。")), 150000);
