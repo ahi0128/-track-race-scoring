@@ -247,7 +247,16 @@ function photoRosterFromText(text, international = false) {
       status(rows.length ? "擷取到 " + rows.length + " 列候選名單，請核對人數、背號、姓名與隊伍；空白和誤字需修正。"
         : "未能組成名單，已保留辨識原文。請確認照片文字清楚；也可取消自動判斷，手動調整欄位後重試。");
     } catch (error) {
-      if (token === generation) status("辨識未完成：" + error.message);
+      if (token === generation) {
+        console.error("照片 OCR 辨識失敗", error);
+        const detail = error instanceof Error ? (error.message || error.name)
+          : typeof error === "string" ? error
+          : error && typeof error === "object"
+            ? (error.message || error.reason || error.error || JSON.stringify(error))
+            : String(error);
+        status("辨識未完成：" + (detail && detail !== "undefined" && detail !== "{}"
+          ? detail : "辨識引擎初始化或執行失敗，請重新整理後重試；若持續發生，請提供此畫面。"));
+      }
     } finally {
       clearTimeout(timeout);
       if (token === generation) await stop();
