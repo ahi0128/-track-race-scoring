@@ -143,10 +143,12 @@ header{margin-bottom:12px}
     <div><canvas id="photoPreview" hidden style="max-width:100%;height:auto;background:white"></canvas></div>
     <div>
       <label>名單格式<select id="photoFormat"><option value="domestic">國內：背號、姓名、隊伍、UCI 證號</option><option value="international">國際：背號、姓名、國家／地區</option></select></label>
+      <label style="display:flex;align-items:center;gap:8px"><input id="photoAuto" type="checkbox" checked>自動判斷背號與名單欄位</label>
       <details><summary>調整欄位位置（對照照片）</summary><p class="meta">填入各欄左側位置，占照片寬度的百分比。最後一欄填 UCI 證號或備註的左側，避免混入名單。</p>
       <div class="fields"><label>背號起點 %<input id="photoBibX" type="number" min="0" max="100" value="13"></label><label>姓名起點 %<input id="photoNameX" type="number" min="0" max="100" value="22"></label><label id="photoTeamLabel">隊伍起點 %<input id="photoTeamX" type="number" min="0" max="100" value="38"></label><label>名單終點 %<input id="photoEndX" type="number" min="0" max="100" value="59"></label></div></details>
       <button type="button" class="primary" id="recognizePhoto" disabled>開始辨識</button>
       <p id="photoStatus" class="note" role="status" aria-live="polite"></p>
+      <details id="photoRawDetails"><summary>查看辨識原文</summary><label>辨識原文（分欄失敗時仍保留）<textarea id="photoRaw" rows="8" readonly></textarea></label></details>
       <label>核對與修正名單（每列：背號、姓名、隊伍、國家；欄位以 Tab 分隔）<textarea id="photoRoster" rows="12" spellcheck="false" placeholder="辨識後可在這裡修正；亦可貼上已整理的四欄名單。"></textarea></label>
       <label style="display:flex;align-items:center;gap:8px"><input id="photoChecked" type="checkbox">我已對照原圖核對選手人數與資料</label>
       <button type="button" id="photoImport" class="primary">確認匯入名單</button>
@@ -635,6 +637,6 @@ if (race) persist();
 showSetup();
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js").catch(() => {});
 </script>
-<script src="./photo-import.js?v=20261118-3"></script>
+<script src="./photo-import.js?v=20261118-4"></script>
 </body>
 </html>

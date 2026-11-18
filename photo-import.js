@@ -1,40 +1,96 @@
 "use strict";
 
-// Bounding boxes keep the long UCI number and the two start-position headings
-// out of the rider fields. Every result still needs the user's review.
+// Infer columns from the repeated bib positions instead of assuming that every
+// photographed page uses the same margins. Manual boundaries remain optional.
+function photoWords(tsv) {
+  return tsv.split(/\r?\n/).slice(1).map(line => {
+    const c = line.split("\t");
+    return { level: Number(c[0]), x: Number(c[6]), y: Number(c[7]),
+      w: Number(c[8]), h: Number(c[9]), text: c.slice(11).join("\t").trim() };
+  }).filter(w => w.level === 5 && w.text && w.w > 0 && w.h > 0);
+}
+function photoMedian(values) {
+  const sorted = [...values].sort((a, b) => a - b);
+  return sorted.length ? sorted[Math.floor(sorted.length / 2)] : 0;
+}
+function photoJoin(words) {
+  return [...words].sort((a, b) => a.x - b.x).map(w => w.text).join(" ")
+    .replace(/([\u3400-\u9fff])\s+(?=[\u3400-\u9fff])/g, "$1");
+}
+function photoBibGroups(words, width) {
+  const groups = [];
+  for (const word of words.filter(w => /^\d{1,5}$/.test(w.text))) {
+    let group = groups.find(g => Math.abs(photoMedian(g.map(w => w.x + w.w / 2)) - (word.x + word.w / 2)) < width * .025);
+    if (!group) groups.push(group = []);
+    group.push(word);
+  }
+  const score = group => new Set(group.map(w => Number(w.text))).size + group.filter(w => Number(w.text) > 40).length * .2;
+  return groups.filter(g => g.length >= 2).sort((a, b) => score(b) - score(a) || a[0].x - b[0].x);
+}
+function photoRowsAtBibs(words, bibs) {
+  const sorted = [...bibs].sort((a, b) => a.y - b.y);
+  return sorted.map((bib, index) => {
+    const center = bib.y + bib.h / 2;
+    const gap = Math.min(...[sorted[index - 1], sorted[index + 1]].filter(Boolean)
+      .map(w => Math.abs(w.y + w.h / 2 - center)));
+    const tolerance = Math.min(Math.max(bib.h * 1.3, 12), gap * .46);
+    return { bib, words: words.filter(w => Math.abs(w.y + w.h / 2 - center) <= tolerance).sort((a, b) => a.x - b.x) };
+  });
+}
+function photoAutoRoster(tsv, width, international = false) {
+  const words = photoWords(tsv);
+  const bibs = photoBibGroups(words, width)[0] || [];
+  const sourceRows = photoRowsAtBibs(words, bibs);
+  const candidates = sourceRows.map(({ bib, words: row }) => {
+    const right = row.filter(w => w.x >= bib.x + bib.w && !/\d{6,}/.test(w.text));
+    let size = 0;
+    let split = -1;
+    for (let i = 0; i < right.length - 1; i++) {
+      size += right[i].text.replace(/\s/g, "").length;
+      const gap = right[i + 1].x - right[i].x - right[i].w;
+      if (size >= 2 && gap > Math.max(width * .014, right[i].h * .85)) { split = i + 1; break; }
+    }
+    return { bib, right, split };
+  });
+  const teamX = photoMedian(candidates.filter(r => r.split > 0).map(r => r.right[r.split].x));
+  const seen = new Set();
+  return candidates.map(({ bib, right, split }) => {
+    if (seen.has(Number(bib.text))) return null;
+    seen.add(Number(bib.text));
+    const boundary = split > 0 ? right[split].x : teamX || Infinity;
+    const name = photoJoin(right.filter(w => w.x < boundary));
+    const team = photoJoin(right.filter(w => w.x >= boundary));
+    return [bib.text, name, international ? "" : team, international ? team : ""];
+  }).filter(Boolean);
+}
 function photoRosterFromTsv(tsv, width, columns, international = false) {
   const anchors = [columns.bib, columns.name, columns.team];
   if (!anchors.every(Number.isFinite) || new Set(anchors).size !== 3 ||
-      Math.min(...anchors) < 0 || columns.end > 100 || columns.end <= Math.max(...anchors)) {
+      Math.min(...anchors) < 0 || !Number.isFinite(columns.end) || columns.end > 100 || columns.end <= Math.max(...anchors)) {
     throw new Error("欄位位置必須不同，且介於 0 與名單終點之間。");
   }
-  const words = tsv.split(/\r?\n/).slice(1).map(line => {
-    const cells = line.split("\t");
-    return { level: Number(cells[0]), x: Number(cells[6]), y: Number(cells[7]),
-      w: Number(cells[8]), h: Number(cells[9]), text: cells.slice(11).join("\t").trim() };
-  }).filter(word => word.level === 5 && word.text && word.w > 0);
+  const words = photoWords(tsv);
   function inColumn(word, start) {
     const end = Math.min(...anchors.filter(anchor => anchor > start), columns.end);
     const center = (word.x + word.w / 2) * 100 / width;
     return center >= start && center < end;
   }
-  const bibWords = words.filter(word => inColumn(word, columns.bib) && /^\d{1,5}$/.test(word.text));
-  const sorted = [...bibWords].sort((a, b) => a.y - b.y);
-  function join(tokens) {
-    return tokens.sort((a, b) => a.x - b.x).map(word => word.text).join(" ")
-      .replace(/([\u3400-\u9fff])\s+(?=[\u3400-\u9fff])/g, "$1");
-  }
-  return sorted.map((bib, index) => {
-    const center = bib.y + bib.h / 2;
-    const neighbors = [sorted[index - 1], sorted[index + 1]].filter(Boolean);
-    const gap = Math.min(...neighbors.map(other => Math.abs(other.y + other.h / 2 - center)));
-    const tolerance = Math.min(Math.max(bib.h, 12), gap * .45);
-    const row = words.filter(word => Math.abs(word.y + word.h / 2 - center) <= tolerance);
-    const name = join(row.filter(word => inColumn(word, columns.name)));
-    const team = join(row.filter(word => inColumn(word, columns.team)));
-    // A number without a name is usually part of a date, heading, or distance.
-    if (!name || !/[A-Za-z\u3400-\u9fff]/.test(name)) return null;
+  const bibs = words.filter(w => inColumn(w, columns.bib) && /^\d{1,5}$/.test(w.text));
+  return photoRowsAtBibs(words, bibs).map(({bib, words: row}) => {
+    const name = photoJoin(row.filter(w => inColumn(w, columns.name)));
+    const team = photoJoin(row.filter(w => inColumn(w, columns.team)));
     return [bib.text, name, international ? "" : team, international ? team : ""];
+  });
+}
+function photoRosterFromText(text, international = false) {
+  const seen = new Set();
+  return text.split(/\r?\n/).map(line => {
+    const match = line.trim().match(/^(\d{1,5})\s+(.+)/);
+    if (!match || seen.has(Number(match[1]))) return null;
+    const fields = match[2].replace(/\b\d{9,14}\b.*$/, "").trim().split(/\t+|\s{2,}/);
+    if (!fields[0] || !/[A-Za-z\u3400-\u9fff]/.test(fields[0])) return null;
+    seen.add(Number(match[1]));
+    return [match[1], fields[0], international ? "" : fields.slice(1).join(" "), international ? fields.slice(1).join(" ") : ""];
   }).filter(Boolean);
 }
 
@@ -47,7 +103,7 @@ function photoRosterFromTsv(tsv, width, columns, international = false) {
   const canvas = $("photoPreview");
   const status = text => { $("photoStatus").textContent = text; };
   function busy(value) {
-    for (const id of ["takePhoto", "choosePhoto", "rotatePhoto", "recognizePhoto", "photoFormat", "photoImport"]) {
+    for (const id of ["takePhoto", "choosePhoto", "rotatePhoto", "recognizePhoto", "photoFormat", "photoImport", "photoAuto", "photoBibX", "photoNameX", "photoTeamX", "photoEndX"]) {
       $(id).disabled = value || (!source && ["rotatePhoto", "recognizePhoto"].includes(id));
     }
   }
@@ -126,6 +182,7 @@ function photoRosterFromTsv(tsv, width, columns, international = false) {
       angle = 0;
       draw();
       $("photoRoster").value = "";
+      $("photoRaw").value = "";
       $("photoChecked").checked = false;
       status("照片已載入。請確定名單文字清楚、方向正確，再開始辨識。");
     } catch { status("無法讀取此照片。請使用 JPG、PNG，或直接重新拍照。"); }
@@ -139,6 +196,9 @@ function photoRosterFromTsv(tsv, width, columns, international = false) {
   $("cameraFile").onchange = $("photoFile").onchange = chooseFile;
   $("rotatePhoto").onclick = () => { angle = (angle + 90) % 360; draw(); $("photoChecked").checked = false; };
   $("photoRoster").oninput = () => { $("photoChecked").checked = false; };
+  for (const id of ["photoBibX", "photoNameX", "photoTeamX", "photoEndX"]) {
+    $(id).oninput = () => { $("photoAuto").checked = false; };
+  }
   $("photoFormat").onchange = () => {
     const international = $("photoFormat").value === "international";
     ["photoBibX", "photoNameX", "photoTeamX", "photoEndX"].forEach((id, index) => {
@@ -160,7 +220,8 @@ function photoRosterFromTsv(tsv, width, columns, international = false) {
       const international = $("photoFormat").value === "international";
       const columns = { bib: Number($("photoBibX").value), name: Number($("photoNameX").value),
         team: Number($("photoTeamX").value), end: Number($("photoEndX").value) };
-      photoRosterFromTsv("", canvas.width, columns, international);
+      const automatic = $("photoAuto").checked;
+      if (!automatic) photoRosterFromTsv("", canvas.width, columns, international);
       const operation = (async () => {
         await loadLibrary();
         if (token !== generation) return;
@@ -177,10 +238,14 @@ function photoRosterFromTsv(tsv, width, columns, international = false) {
         timeout = setTimeout(() => reject(new Error("辨識逾時，請確認連線並用較清晰的照片重試。")), 150000);
       })]);
       if (token !== generation || !result) return;
-      const rows = photoRosterFromTsv(result.data.tsv || "", canvas.width, columns, international);
+      $("photoRaw").value = result.data.text || "";
+      let rows = automatic ? photoAutoRoster(result.data.tsv || "", canvas.width, international)
+        : photoRosterFromTsv(result.data.tsv || "", canvas.width, columns, international);
+      if (!rows.length) rows = photoRosterFromText(result.data.text || "", international);
       $("photoRoster").value = rows.map(row => row.join("\t")).join("\n");
-      status(rows.length ? "辨識到 " + rows.length + " 位。請逐列對照原圖；缺漏的選手可在下方補入。"
-        : "未能分出選手欄位。請調整欄位位置後重試，或在下方貼上整理好的四欄名單。");
+      $("photoRawDetails").open = !rows.length;
+      status(rows.length ? "擷取到 " + rows.length + " 列候選名單，請核對人數、背號、姓名與隊伍；空白和誤字需修正。"
+        : "未能組成名單，已保留辨識原文。請確認照片文字清楚；也可取消自動判斷，手動調整欄位後重試。");
     } catch (error) {
       if (token === generation) status("辨識未完成：" + error.message);
     } finally {
