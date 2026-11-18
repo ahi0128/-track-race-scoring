@@ -1,6 +1,6 @@
 const cacheName = "track-race-scoring-shell-v8";
 const shell = new URL("./", self.registration.scope).href;
-const importer = new URL("photo-import.js?v=20261118-4", shell).href;
+const importer = new URL("photo-import.js?v=20261118-5", shell).href;
 
 self.addEventListener("install", event => {
   event.waitUntil(caches.open(cacheName).then(cache => cache.addAll([shell, importer].map(url => new Request(url, { cache: "reload" })))).then(() => self.skipWaiting()));
