@@ -10,20 +10,6 @@
 :root{color-scheme:dark;--bg:#141921;--panel:#1d2530;--key:#283441;--line:#364557;--ink:#f3f6fa;--muted:#b5c1ce;--accent:#d6fa64;--danger:#ffbd9b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 "Atkinson Hyperlegible Next",system-ui,sans-serif}main{max-width:1440px;margin:auto;padding:clamp(14px,2.6vw,32px)}header,.section-head,.actions,.racebar{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}header{margin-bottom:20px}h1,h2,p{margin:0}h1{font-size:clamp(22px,3vw,32px);letter-spacing:.03em}h2{font-size:17px}.sub,.meta,small{color:var(--muted)}.racebar{background:var(--accent);color:#192300;border-radius:14px;padding:14px 18px;margin-bottom:12px;font-weight:750}.racebar strong{font-size:clamp(24px,4vw,38px);line-height:1.12}.layout{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(280px,1fr);gap:12px}.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:clamp(10px,1.7vw,18px)}.section-head{margin-bottom:12px}.riders{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:7px}.rider{min-width:0;min-height:60px;padding:4px;position:relative}.rider strong{display:block;font-size:clamp(20px,2.8vw,29px);line-height:1.04;font-variant-numeric:tabular-nums}.rider span{display:block;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.rider i{position:absolute;right:4px;top:3px;font-style:normal;font-size:11px;border-radius:8px;background:#263301;color:var(--accent);padding:0 4px}button,select,input,textarea{font:inherit;color:inherit}button{border:1px solid var(--line);border-radius:9px;background:var(--key);min-height:44px;padding:7px 12px;cursor:pointer;touch-action:manipulation}button:disabled{opacity:.48;cursor:default}button:focus-visible{outline:2px solid white;outline-offset:2px}button.primary,button[aria-pressed="true"]{background:var(--accent);color:#182300;border-color:var(--accent);font-weight:750}button.primary{min-width:100px}.tools{margin-top:12px;justify-content:flex-start}.entry{min-height:105px;border-bottom:1px solid var(--line);margin-bottom:12px;padding-bottom:12px}.picked{min-height:24px;margin:6px 0 10px;font-size:17px;overflow-wrap:anywhere}.table-wrap{max-height:300px;overflow:auto}table{width:100%;border-collapse:collapse;text-align:left}th,td{padding:6px;border-bottom:1px solid var(--line)}th{color:var(--muted);font-size:13px;position:sticky;top:0;background:var(--panel)}td:last-child,th:last-child{text-align:right}.note{min-height:23px;margin-top:8px;color:var(--danger);font-size:14px}dialog{width:min(620px,94vw);max-height:92dvh;overflow:auto;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:14px;padding:18px}dialog::backdrop{background:#000a}form label{display:grid;gap:5px;font-size:14px;margin:9px 0}select,input,textarea{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:9px;min-width:0}textarea{width:100%;resize:vertical}.fields{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.history{margin:10px 0 0;padding-left:22px}.history li{border-bottom:1px solid var(--line);padding:5px 0}.history button{margin-left:8px}
 @media(max-width:700px){.layout{grid-template-columns:1fr}.riders{gap:5px}.rider{min-height:53px}.rider strong{font-size:22px}.rider span{font-size:11px}}@media print{body{background:white;color:black}header .actions,.racebar,#entry,.entry,.note{display:none}.layout{display:block}.panel,th{background:white;color:black}.table-wrap{max-height:none}}
-.scoreboard{margin-bottom:12px;padding:8px 12px 10px}
-.scoreboard .section-head{margin-bottom:6px}
-.scoreboard .section-head>div{display:flex;align-items:baseline;gap:6px 12px;flex-wrap:wrap}
-.scoreboard .section-head button{min-height:40px}
-.score-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin:0;padding:0;list-style:none;min-height:48px}
-.score-card{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:1px 6px;align-items:center;border:1px solid var(--line);border-radius:8px;padding:4px 8px;background:var(--bg);min-height:48px}
-.score-card:first-child{border-color:var(--accent)}
-.score-rider,.score-detail{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.score-rider{font-size:15px;font-weight:700}
-.score-detail{font-size:12px}
-.score-number{color:var(--accent);font-variant-numeric:tabular-nums;font-size:19px;grid-row:span 2}
-.score-number small{font-size:11px}
-.score-empty{grid-column:1/-1;align-self:center;color:var(--muted)}
-dialog .table-wrap{max-height:65dvh}
 .race-summary{display:grid;gap:4px}
 .lap-counter{display:flex;align-items:center;gap:8px;margin-left:auto}
 .lap-counter button{min-width:76px;min-height:48px;background:#263301;color:#fff;border-color:#263301;padding:5px 10px;white-space:nowrap}
@@ -31,8 +17,7 @@ dialog .table-wrap{max-height:65dvh}
 .lap-counter output{min-width:76px;text-align:center;font-size:clamp(21px,3vw,30px);line-height:1.12;font-variant-numeric:tabular-nums}
 .lap-counter output small{display:block;color:inherit;font-size:12px;margin-bottom:3px}
 @media(max-width:640px){.lap-counter{margin-left:0}}
-@media(max-width:640px){.score-grid{grid-template-columns:repeat(2,minmax(0,1fr));min-height:102px}}
-@media print{.scoreboard{display:none}}
+
 [hidden]{display:none!important}
 .setup-panel{max-width:960px;margin:0 auto}
 .setup-panel h2{margin-bottom:10px}
@@ -50,6 +35,41 @@ dialog .table-wrap{max-height:65dvh}
 .setup-panel summary{cursor:pointer}
 .reset-action{color:var(--danger)}
 @media print{#setupView{display:none!important}}
+
+main{max-width:1800px;padding:14px}
+header{margin-bottom:12px}
+.layout{grid-template-columns:minmax(290px,360px) minmax(0,1fr);align-items:start;gap:10px}
+#entry{position:sticky;top:10px;padding:12px}
+#entry .tools{margin:0 0 10px;gap:6px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+#entry .tools button{padding:8px 5px}
+#entry .riders{grid-template-columns:repeat(4,minmax(0,1fr));gap:5px}
+#entry .rider{min-height:54px}
+#entry .rider strong{font-size:25px}
+#entry .section-head{margin-bottom:6px}
+#entry .entry{min-height:0;border:0;margin:8px 0 0;padding:0}
+#entry .picked{font-size:14px;margin:3px 0 6px;min-height:20px}
+#entry .actions{gap:5px}
+#entry #confirm{min-height:50px;flex:1}
+#entry .note{margin-top:4px;min-height:0}
+.results-panel{min-width:0;padding:12px}
+.results-panel .table-wrap{max-height:none;overflow-x:auto}
+.results-table{font-size:13px;line-height:1.3;font-variant-numeric:tabular-nums;white-space:nowrap;border-collapse:separate;border-spacing:0}
+.results-table th,.results-table td{padding:6px 7px;text-align:center;min-width:42px}
+.results-table th{position:static}
+.results-table th.identity,.results-table td.identity{text-align:left;min-width:130px}
+.results-table .identity small{display:block;font-size:11px;font-weight:400}
+.results-table .total{font-weight:800;color:var(--accent);font-size:17px;background:#263301}
+.results-table .delta{min-width:52px;font-weight:700}
+.positive{color:#b9ef72}
+.negative{color:#ffaeac}
+.results-table tr:last-child td{border-bottom:0}
+.results-table .sprint-pending{color:var(--danger)}
+#saveState{margin-left:auto}
+#liveChange{color:var(--muted);font-size:13px;margin:4px 0 8px;min-height:18px}
+#roundMode{grid-column:1/-1}
+@media(min-width:760px) and (max-width:1100px){.layout{grid-template-columns:minmax(270px,32%) minmax(0,1fr)}}
+@media(max-width:759px){.layout{grid-template-columns:1fr}#entry{position:static}#entry .riders{grid-template-columns:repeat(5,minmax(0,1fr))}}
+@media print{.results-panel{padding:0}.results-table .total{color:black;background:white}.positive,.negative{color:black}}
 </style>
 </head>
 <body>
@@ -85,27 +105,31 @@ dialog .table-wrap{max-height:65dvh}
     <button id="lapIncrease" type="button">＋1 圈</button>
   </div>
 </div>
-<section id="scoreboard" class="panel scoreboard" aria-labelledby="scoreTitle">
-<div class="section-head"><div><h2 id="scoreTitle">即時積分總覽</h2><small id="scoreContext"></small></div><button id="scoreOpen">全體排名</button></div>
-<ol id="scoreLeaders" class="score-grid"></ol>
-</section>
 <div class="layout">
 <section id="entry" class="panel" aria-labelledby="ridersTitle">
-<div class="section-head"><h2 id="ridersTitle">點選背號</h2><span class="meta" id="fieldCount"></span></div>
+<div class="actions tools" role="group" aria-label="選擇記錄類型">
+<button id="roundMode" type="button">搶分</button>
+<button id="plus" type="button">套圈 ＋20</button>
+<button id="minus" type="button">落後一圈 −20</button>
+<button id="finishMode" type="button">終點順序</button>
+<button id="skip" type="button">待確認</button>
+</div>
+<div class="section-head"><h2 id="ridersTitle">點選選手</h2><span class="meta" id="fieldCount"></span></div>
 <div id="riders" class="riders"></div>
-<div class="actions tools"><button id="plus">＋ 得圈</button><button id="minus">− 失圈</button><button id="skip">待確認</button><button id="finishMode">終點順序</button></div>
-<p id="message" class="note" role="status"></p></section>
-<section class="panel" aria-labelledby="resultTitle">
-<div class="entry"><div class="section-head"><h2 id="selectionTitle">本輪輸入</h2></div>
-<p class="picked" id="picked"></p><div class="actions"><div><button id="clear">清除</button> <button id="undo">撤銷</button></div><button class="primary" id="confirm">確認</button></div></div>
-<div class="section-head"><h2 id="resultTitle">暫定成績</h2><small id="saveState"></small></div>
-<div class="table-wrap"><table><thead><tr><th scope="col">名次</th><th scope="col">背號</th><th scope="col">選手</th><th scope="col" id="metric"></th></tr></thead><tbody id="result"></tbody></table></div>
+<div class="entry"><h2 id="selectionTitle">本輪輸入</h2>
+<p class="picked" id="picked"></p>
+<div class="actions"><button class="primary" id="confirm">確認</button><button id="clear">清除點選</button><button id="undo">撤銷</button></div></div>
+<p id="message" class="note" role="status"></p>
+</section>
+<section class="panel results-panel" aria-labelledby="resultTitle">
+<div class="section-head"><h2 id="resultTitle">全體選手即時積分</h2><small id="saveState"></small></div>
+<p id="liveChange" role="status"></p>
+<div class="table-wrap" tabindex="0" aria-label="全體選手詳細計分表">
+<table class="results-table"><thead id="resultHead"></thead><tbody id="result"></tbody></table>
+</div>
 </section></div>
 </div>
 </main>
-<dialog id="allScores" aria-labelledby="allScoresTitle"><div class="section-head"><h2 id="allScoresTitle">全體即時積分</h2><button type="button" data-close="allScores">關閉</button></div>
-<div class="table-wrap" tabindex="0" aria-label="全體排名表"><table><thead><tr><th scope="col">名次</th><th scope="col">背號</th><th scope="col">選手</th><th scope="col">分數</th></tr></thead><tbody id="allScoreRows"></tbody></table></div>
-</dialog>
 <dialog id="resetDialog" aria-labelledby="resetTitle">
   <div class="section-head"><h2 id="resetTitle">清除本場資料</h2></div>
   <p>清除本場選手名單、圈數和計分紀錄，並返回賽制選擇。</p>
@@ -167,21 +191,34 @@ function standings(race) {
   const removed = race.events.filter(event => event.kind === "out").map(event => event.bibs[0]);
   const lapped = new Set(race.events.filter(event => event.kind === "lapped").flatMap(event => event.bibs));
   const riders = race.roster.map(rider => ({
-    ...rider, points: 0, lapsGained: 0, eliminated: removed.includes(rider.bib), lapped: lapped.has(rider.bib), rank: null
+    ...rider, points: 0, sprintPoints: [], gainPoints: 0, lossPoints: 0, lastChange: 0, lapsGained: 0, eliminated: removed.includes(rider.bib), lapped: lapped.has(rider.bib), rank: null
   }));
   const byBib = new Map(riders.map(rider => [rider.bib, rider]));
   const schedule = sprintSchedule(race.laps, race.track);
+  const latest = race.events.findLast(event => ["sprint", "plus", "minus"].includes(event.kind));
   for (const event of race.events) {
     if (event.kind === "plus" || event.kind === "minus") {
       for (const bib of event.bibs) {
         const rider = byBib.get(bib);
         if (race.type === "scratch") rider.lapsGained++;
-        else rider.points += event.kind === "plus" ? 20 : -20;
+        else {
+          const value = event.kind === "plus" ? 20 : -20;
+          rider.points += value;
+          if (value > 0) rider.gainPoints += value;
+          else rider.lossPoints += value;
+          if (event === latest) rider.lastChange += value;
+        }
       }
     }
     if (event.kind === "sprint") {
       const multiplier = event.round === schedule.length ? 2 : 1;
-      event.bibs.forEach((bib, index) => { byBib.get(bib).points += [5, 3, 2, 1][index] * multiplier; });
+      event.bibs.forEach((bib, index) => {
+        const rider = byBib.get(bib);
+        const value = [5, 3, 2, 1][index] * multiplier;
+        rider.points += value;
+        rider.sprintPoints[event.round - 1] = value;
+        if (event === latest) rider.lastChange += value;
+      });
     }
   }
   const finalSprint = race.events.find(event => event.kind === "sprint" && event.round === schedule.length)?.bibs || [];
@@ -232,26 +269,64 @@ function changeMode(next) {
   mode = next; selected = []; editIndex = null; $("message").textContent = ""; render();
 }
 
-function renderScoreboard(riders, { points, schedule }, pending) {
-  $("scoreboard").hidden = !points;
-  if (!points) return;
+function signedPoints(value) {
+  return value > 0 ? "+" + value : String(value);
+}
 
-  const hasScores = race.events.some(event => ["sprint", "plus", "minus"].includes(event.kind));
-  const recorded = race.events.filter(event => event.kind === "sprint").length;
-  $("scoreContext").textContent = hasScores
-    ? "已記 " + recorded + "／" + schedule.length + " 次衝刺" + (pending ? " · 有待補紀錄" : "")
-    : (pending ? "有待補紀錄" : "全員 0 分");
-  $("scoreLeaders").innerHTML = hasScores
-    ? riders.slice(0, 4).map((rider, index) => {
-      const gap = riders[0].points - rider.points;
-      const rank = rider.rank === null ? "同分" : "第 " + rider.rank + " 名";
-      const detail = index === 0 ? rank : rank + (gap ? " · 落後 " + gap : " · 同為最高分");
-      return '<li class="score-card"><span class="score-rider">' + escapeHtml(rider.bib + " " + (rider.name || "")) +
-        '</span><strong class="score-number">' + rider.points + '<small> 分</small></strong><small class="score-detail">' + detail + '</small></li>';
-    }).join("")
-    : '<li class="score-empty">確認第一筆計分後，這裡會顯示領先選手。</li>';
-  $("allScoreRows").innerHTML = $("result").innerHTML;
-  $("allScoresTitle").textContent = $("resultTitle").textContent === "成績" ? "全體成績" : "全體即時積分";
+function pointsHeaders(schedule) {
+  return ["名次", "背號", "姓名／隊伍", "總分", "本次增減",
+    ...schedule.map((lap, index) => "S" + (index + 1) + (index === schedule.length - 1 ? " ×2" : "")),
+    "套圈加分", "落後扣分", "圈分合計", "終點順序"];
+}
+
+function pointsValues(rider, schedule, events) {
+  const finish = events.findLast(event => event.kind === "finish")?.bibs || [];
+  const finalSprint = events.find(event => event.kind === "sprint" && event.round === schedule.length)?.bibs || [];
+  const finishOrder = [...finalSprint, ...finish.filter(bib => !finalSprint.includes(bib))];
+  const place = finishOrder.indexOf(rider.bib);
+  return [rider.rank ?? "同分", rider.bib, rider.name || "", rider.points, signedPoints(rider.lastChange),
+    ...schedule.map((lap, index) => {
+      const event = events.find(event => ["sprint", "skip"].includes(event.kind) && event.round === index + 1);
+      return event?.kind === "skip" ? "待補" : event ? (rider.sprintPoints[index] || 0) : "—";
+    }), signedPoints(rider.gainPoints), signedPoints(rider.lossPoints),
+    signedPoints(rider.gainPoints + rider.lossPoints), place >= 0 ? place + 1 : "—"];
+}
+
+function renderResults(riders, context, pending) {
+  const { points, schedule, ended } = context;
+  const finalRecorded = race.events.some(event => event.kind === "finish");
+  $("resultTitle").textContent = points ? "全體選手即時積分" : "全體選手即時排名";
+  if (ended && !pending && (!points || finalRecorded)) $("resultTitle").textContent += "・完賽";
+  const latest = race.events.findLast(event => ["sprint", "plus", "minus"].includes(event.kind));
+  const changeName = latest?.kind === "sprint" ? "第 " + latest.round + " 次搶分"
+    : latest?.kind === "plus" ? "套圈" : "落後一圈";
+  $("liveChange").textContent = points
+    ? latest ? "最近記錄 · " + changeName + " · " +
+      riders.filter(rider => rider.lastChange).map(rider => rider.bib + " " + signedPoints(rider.lastChange)).join("、")
+      : "全員 0 分"
+    : "";
+  const headers = points ? pointsHeaders(schedule) : ["名次", "背號", "姓名／隊伍", "得圈／狀態"];
+  $("resultHead").innerHTML = "<tr>" + headers.map((label, index) =>
+    '<th scope="col"' + (index === 2 ? ' class="identity"' : "") +
+    (points && index >= 5 && index < 5 + schedule.length ? ' title="完成第 ' + schedule[index - 5] + ' 圈搶分"' : "") +
+    ">" + escapeHtml(label) + "</th>").join("") + "</tr>";
+  $("result").innerHTML = riders.map(rider => {
+    const values = points ? pointsValues(rider, schedule, race.events)
+      : [rider.rank ?? "—", rider.bib, rider.name || "", riderStatus(rider)];
+    return '<tr data-bib="' + escapeHtml(rider.bib) + '">' + values.map((value, index) => {
+      if (index === 2) return '<td class="identity">' + escapeHtml(value || "—") + "<small>" +
+        escapeHtml([rider.team, rider.country].filter(Boolean).join(" · ")) + "</small></td>";
+      let className = "";
+      if (points) {
+        if (index === 3) className = "total";
+        else if (index === 4) className = "delta " + (rider.lastChange > 0 ? "positive" : rider.lastChange < 0 ? "negative" : "");
+        else if (String(value).startsWith("+")) className = "positive";
+        else if (String(value).startsWith("-")) className = "negative";
+        else if (value === "待補") className = "sprint-pending";
+      }
+      return '<td class="' + className + '">' + escapeHtml(value) + "</td>";
+    }).join("") + "</tr>";
+  }).join("");
 }
 
 function lapCount() {
@@ -271,8 +346,7 @@ function render() {
   const riders = standings(race);
   const onTrack = new Set(riders.filter(rider => !rider.eliminated && !rider.lapped).map(rider => rider.bib));
   const pending = race.events.some(event => event.kind === "skip") && points;
-  const finalRecorded = race.events.some(event => event.kind === "finish");
-  const labelsByMode = { round: scratch ? "終點順序" : "本輪輸入", plus: "得圈選手", minus: "失圈選手", lapped: "被套圈退場選手", finish: "終點順序" };
+  const labelsByMode = { round: scratch ? "終點順序" : points ? "搶分 · 依序選前四名" : "選擇淘汰選手", plus: "套圈 · 選擇選手", minus: "落後一圈 · 選擇選手", lapped: "被套圈退場選手", finish: "終點順序" };
   $("raceInfo").textContent = race.name + "・" + labels[race.type] + "・" + race.track + " m";
   $("next").textContent = points
     ? (ended ? "已記到終點" : "下一次衝刺 · 剩 " + (race.laps - schedule[round - 1]) + " 圈")
@@ -303,7 +377,11 @@ function render() {
     return button;
   }));
   $("plus").hidden = $("minus").hidden = !points && !scratch;
-  $("minus").textContent = scratch ? "被套圈退場" : "− 失圈";
+  $("roundMode").textContent = points ? "搶分" : scratch ? "終點順序" : "淘汰";
+  $("roundMode").disabled = ended;
+  $("roundMode").setAttribute("aria-pressed", String(mode === "round"));
+  $("plus").textContent = scratch ? "套圈 ＋1 圈" : "套圈 ＋20";
+  $("minus").textContent = scratch ? "被套圈退場" : "落後一圈 −20";
   $("plus").disabled = $("minus").disabled = ended;
   $("plus").setAttribute("aria-pressed", String(mode === "plus"));
   $("minus").setAttribute("aria-pressed", String(mode === "minus" || mode === "lapped"));
@@ -321,10 +399,7 @@ function render() {
     : points && mode === "round" ? 4 : !points && !scratch && remaining === 2 ? 2 : 1;
   $("confirm").disabled = selected.length < needed;
   $("saveState").textContent = saved ? "此裝置儲存" : "儲存失敗";
-  $("resultTitle").textContent = ended && !pending && (!points || finalRecorded) ? "成績" : "暫定成績";
-  $("metric").textContent = points ? "分數" : scratch ? "得圈／狀態" : "狀態";
-  $("result").innerHTML = riders.map(rider => "<tr><td>" + (rider.rank ?? (ended && points ? "待判" : "—")) + "</td><td>" + escapeHtml(rider.bib) + "</td><td>" + escapeHtml(rider.name || "—") + "<br><small>" + escapeHtml([rider.team, rider.country].filter(Boolean).join(" · ")) + "</small></td><td>" + (points ? rider.points : riderStatus(rider)) + "</td></tr>").join("");
-  renderScoreboard(riders, context, pending);
+  renderResults(riders, context, pending);
 }
 
 function riderStatus(rider) {
@@ -364,6 +439,7 @@ $("undo").onclick = () => {
   $("message").textContent = "已撤銷最後一筆";
 };
 $("skip").onclick = () => record({ kind: "skip", round: getContext().round, bibs: [] });
+$("roundMode").onclick = () => changeMode("round");
 $("plus").onclick = () => changeMode("plus");
 $("minus").onclick = () => changeMode(race.type === "scratch" ? "lapped" : "minus");
 $("finishMode").onclick = () => {
@@ -403,7 +479,6 @@ function parseRosterRows(rows) {
 
 $("lapDecrease").onclick = () => changeLapCount(-1);
 $("lapIncrease").onclick = () => changeLapCount(1);
-$("scoreOpen").onclick = () => $("allScores").showModal();
 function addRosterRow(rider = {}) {
   const row = document.createElement("tr");
   const fields = [["bib", "背號"], ["name", "姓名"], ["team", "隊伍／學校"], ["country", "國家／地區"]];
@@ -501,8 +576,14 @@ function csvCell(value) {
 }
 
 $("export").onclick = () => {
-  const rows = [["名次", "背號", "姓名", "隊伍／學校", "國家／地區", "分數或狀態"]];
-  for (const rider of standings(race)) rows.push([rider.rank, rider.bib, rider.name, rider.team, rider.country, race.type === "points" ? rider.points : riderStatus(rider)]);
+  const points = race.type === "points";
+  const schedule = sprintSchedule(race.laps, race.track);
+  const rows = [points ? [...pointsHeaders(schedule).slice(0, 3), "隊伍／學校", "國家／地區", ...pointsHeaders(schedule).slice(3)]
+    : ["名次", "背號", "姓名", "隊伍／學校", "國家／地區", "得圈／狀態"]];
+  for (const rider of standings(race)) {
+    const values = points ? pointsValues(rider, schedule, race.events) : [rider.rank ?? "", rider.bib, rider.name, riderStatus(rider)];
+    rows.push([...values.slice(0, 3), rider.team, rider.country, ...values.slice(3)]);
+  }
   const url = URL.createObjectURL(new Blob(["\uFEFF" + rows.map(row => row.map(csvCell).join(",")).join("\r\n")], { type: "text/csv;charset=utf-8" }));
   const link = document.createElement("a"); link.href = url; link.download = race.name + "-成績.csv"; link.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
