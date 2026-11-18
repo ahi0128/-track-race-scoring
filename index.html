@@ -366,7 +366,12 @@ function setLapCount(value) {
   persist();
   render();
 }
-function changeLapCount(delta) { setLapCount(Math.max(0, lapCount() + delta)); }
+function changeLapCount(delta) {
+  const entered = $("lapInput").value.trim();
+  const value = entered === "" ? NaN : Number(entered);
+  if (!Number.isSafeInteger(value) || value < 0) { setLapCount(NaN); return; }
+  setLapCount(Math.max(0, value + delta));
+}
 
 function render() {
   const context = getContext();
@@ -512,6 +517,10 @@ function parseRosterRows(rows) {
 $("lapDecrease").onclick = () => changeLapCount(-1);
 $("lapIncrease").onclick = () => changeLapCount(1);
 $("lapInput").onchange = event => setLapCount(event.target.value.trim() === "" ? NaN : Number(event.target.value));
+$("lapInput").oninput = event => {
+  const value = event.target.value.trim() === "" ? NaN : Number(event.target.value);
+  if (Number.isSafeInteger(value) && value >= 0) { race.lapCount = value; persist(); }
+};
 $("lapInput").onkeydown = event => { if (event.key === "Enter") { event.preventDefault(); event.target.blur(); } };
 function addRosterRow(rider = {}) {
   const row = document.createElement("tr");
