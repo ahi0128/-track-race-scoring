@@ -250,7 +250,7 @@ function standings(race) {
   if (race.type === "points") {
     riders.sort((a, b) => Number(a.lapped) - Number(b.lapped) || b.points - a.points || position(a.bib) - position(b.bib) || a.bib.localeCompare(b.bib, "zh-Hant", { numeric: true }));
     riders.forEach((rider, index) => {
-      const unresolvedTie = !Number.isFinite(position(rider.bib)) && riders.some(other => other !== rider && other.points === rider.points && !Number.isFinite(position(other.bib)));
+      const unresolvedTie = !Number.isFinite(position(rider.bib)) && riders.some(other => !other.lapped && other !== rider && other.points === rider.points && !Number.isFinite(position(other.bib)));
       if (!rider.lapped && !unresolvedTie) rider.rank = index + 1;
     });
   } else if (race.type === "scratch") {
