@@ -62,7 +62,7 @@ function photoRosterFromTsv(tsv, width, columns, international = false) {
     const swapped = angle % 180 !== 0;
     const width = swapped ? source.height : source.width;
     const height = swapped ? source.width : source.height;
-    const scale = Math.min(2, 2400 / Math.max(width, height));
+    const scale = Math.min(2, 3000 / Math.max(width, height));
     canvas.width = Math.round(width * scale);
     canvas.height = Math.round(height * scale);
     const context = canvas.getContext("2d");
