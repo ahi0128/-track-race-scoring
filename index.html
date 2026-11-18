@@ -75,7 +75,7 @@ header{margin-bottom:12px}
 </head>
 <body>
 <main>
-<header><div><h1>場地自由車計分台</h1><p class="sub" id="raceInfo"></p></div><div class="actions" id="raceActions" hidden><button id="setupOpen">新賽事</button><button id="historyOpen">記錄</button><button id="export">匯出 CSV</button><button id="resetOpen" class="reset-action">清除本場資料</button></div></header>
+<header><div><h1>場地自由車計分台</h1><p class="sub" id="raceInfo"></p></div><div class="actions" id="raceActions" hidden><button id="setupOpen">新賽事</button><button id="trackOpen" type="button">場地設定</button><button id="historyOpen">記錄</button><button id="export">匯出 CSV</button><button id="resetOpen" class="reset-action">清除本場資料</button></div></header>
 <section id="setupView" class="panel setup-panel">
   <section id="chooseType" aria-labelledby="chooseTitle">
     <h2 id="chooseTitle" tabindex="-1">選擇賽制</h2>
@@ -88,7 +88,7 @@ header{margin-bottom:12px}
   </section>
   <form id="setupForm" hidden>
     <div class="section-head"><h2 id="setupTitle" tabindex="-1"></h2><button type="button" id="backToTypes">返回賽制選擇</button></div>
-    <div class="fields"><label>賽事名稱<input id="raceName" maxlength="70" placeholder="選填"></label><label>場地<select id="track"><option value="250">250 m</option><option value="333.33">333.33 m</option></select></label><label id="lapsField">總圈數<input type="number" id="laps" min="1" max="400" value="40" required></label></div>
+    <div class="fields"><label>賽事名稱<input id="raceName" maxlength="70" placeholder="選填"></label><label>每圈長度（m）<input id="track" type="number" inputmode="decimal" min="0.01" step="any" value="250" list="trackSizes" required><datalist id="trackSizes"><option value="250"><option value="333"><option value="333.33"><option value="400"><option value="500"></datalist></label><label id="lapsField">總圈數<input type="number" id="laps" min="1" max="400" value="40" required></label></div>
     <div class="table-wrap" tabindex="0" aria-label="選手名單">
       <table class="roster-table"><thead><tr><th scope="col">背號</th><th scope="col">姓名</th><th scope="col">隊伍／學校</th><th scope="col">國家／地區</th><th scope="col">操作</th></tr></thead><tbody id="rosterRows"></tbody></table>
     </div>
@@ -155,6 +155,16 @@ header{margin-bottom:12px}
     </div>
   </div>
 </dialog>
+<dialog id="trackDialog" aria-labelledby="trackTitle">
+  <form id="trackForm">
+    <div class="section-head"><h2 id="trackTitle">場地設定</h2><button type="button" data-close="trackDialog">取消</button></div>
+    <label>每圈長度（m）<input id="currentTrack" type="number" inputmode="decimal" min="0.01" step="any" required></label>
+    <div class="actions setup-tools"><button type="button" data-track-length="250">250 m</button><button type="button" data-track-length="333">333 m</button><button type="button" data-track-length="333.33">333.33 m</button><button type="button" data-track-length="400">400 m</button><button type="button" data-track-length="500">500 m</button></div>
+    <p class="meta">可直接輸入其他長度。儲存後保留本場名單、圈數與計分紀錄；既有搶分及淘汰間隔維持原設定。</p>
+    <p id="trackError" class="note" role="status"></p>
+    <button class="primary" type="submit">儲存場地設定</button>
+  </form>
+</dialog>
 <dialog id="resetDialog" aria-labelledby="resetTitle">
   <div class="section-head"><h2 id="resetTitle">清除本場資料</h2></div>
   <p>清除本場選手名單、圈數和計分紀錄，並返回賽制選擇。</p>
@@ -204,8 +214,8 @@ let mode = "round";
 let editIndex = null;
 let saved = true;
 
-function sprintSchedule(laps, track) {
-  const interval = track === "250" ? 10 : 8;
+function sprintSchedule(laps, track, sprintEvery) {
+  const interval = sprintEvery || (track === "250" ? 10 : 8);
   const rounds = [laps];
   for (let lap = laps - interval; lap >= interval; lap -= interval) rounds.unshift(lap);
   return rounds;
@@ -219,7 +229,7 @@ function standings(race) {
     ...rider, points: 0, sprintPoints: [], gainPoints: 0, lossPoints: 0, lastChange: 0, lapsGained: 0, eliminated: removed.includes(rider.bib), lapped: lapped.has(rider.bib), rank: null
   }));
   const byBib = new Map(riders.map(rider => [rider.bib, rider]));
-  const schedule = sprintSchedule(race.laps, race.track);
+  const schedule = sprintSchedule(race.laps, race.track, race.sprintEvery);
   const latest = race.events.findLast(event => ["sprint", "plus", "minus"].includes(event.kind));
   for (const event of race.events) {
     if (event.kind === "plus" || event.kind === "minus") {
@@ -277,7 +287,7 @@ function getContext() {
   const rounds = race.events.filter(event => ["sprint", "out", "skip"].includes(event.kind)).length;
   const retired = new Set(race.events.filter(event => ["out", "lapped", "retired"].includes(event.kind)).flatMap(event => event.bibs));
   const remaining = race.roster.length - retired.size;
-  const schedule = sprintSchedule(race.laps, race.track);
+  const schedule = sprintSchedule(race.laps, race.track, race.sprintEvery);
   return { points, scratch, round: rounds + 1, remaining, schedule, ended: points ? rounds >= schedule.length : race.events.some(event => event.kind === "finish") };
 }
 
@@ -389,7 +399,7 @@ function render() {
   $("instruction").textContent = points
     ? (ended ? (pending ? "有待補的衝刺紀錄" : "可補登終點順序") : "第 " + round + " 次衝刺 · 完成第 " + schedule[round - 1] + " 圈")
     : scratch ? (ended ? "已記錄終點順序" : "終點依序點選完賽選手")
-    : (ended ? "已記錄決勝順序" : remaining === 2 ? "最後兩人決勝" : "第 " + round + " 輪 · 每 " + (race.track === "250" ? 2 : 1) + " 圈淘汰");
+    : (ended ? "已記錄決勝順序" : remaining === 2 ? "最後兩人決勝" : "第 " + round + " 輪 · 每 " + (race.eliminationEvery || (race.track === "250" ? 2 : 1)) + " 圈淘汰");
   const lapsOnBoard = lapCount();
   $("lapLabel").textContent = points || scratch ? "現場剩餘" : "已騎圈數";
   $("lapInput").value = lapsOnBoard;
@@ -594,12 +604,43 @@ $("setupForm").onsubmit = event => {
     const roster = parseRosterRows(rows);
     const min = setupType === "points" ? 4 : 2;
     if (roster.length < min || roster.length > 40) throw new Error(labels[setupType] + "需要 " + min + "–40 位選手。");
+    const trackLength = validTrackLength($("track").value);
     if (race && !window.confirm("開始新賽事將取代本裝置的現有賽事。確定繼續？")) return;
     race = { name: $("raceName").value.trim() || labels[setupType], type: setupType,
-      track: $("track").value, laps: Number($("laps").value), roster, events: [] };
+      track: String(trackLength), laps: Number($("laps").value), roster, events: [] };
     persist();
     showRace();
   } catch (error) { $("setupError").textContent = error.message; }
+};
+function validTrackLength(value) {
+  const length = Number(String(value).trim());
+  if (!Number.isFinite(length) || length <= 0) throw new Error("每圈長度請輸入大於 0 的公尺數。");
+  return length;
+}
+function applyTrackLength(value) {
+  const length = validTrackLength(value);
+  // Freeze the current round intervals before changing the physical length.
+  // Existing sprint events must keep their original scoring schedule.
+  race.sprintEvery ??= race.track === "250" ? 10 : 8;
+  race.eliminationEvery ??= race.track === "250" ? 2 : 1;
+  race.track = String(length);
+  persist();
+  render();
+}
+$("trackOpen").onclick = () => {
+  $("currentTrack").value = race.track;
+  $("trackError").textContent = "";
+  $("trackDialog").showModal();
+};
+document.querySelectorAll("[data-track-length]").forEach(button => {
+  button.onclick = () => { $("currentTrack").value = button.dataset.trackLength; };
+});
+$("trackForm").onsubmit = event => {
+  event.preventDefault();
+  try {
+    applyTrackLength($("currentTrack").value);
+    $("trackDialog").close();
+  } catch (error) { $("trackError").textContent = error.message; }
 };
 $("resetOpen").onclick = () => {
   $("resetError").textContent = "";
@@ -622,7 +663,7 @@ function csvCell(value) {
 
 $("export").onclick = () => {
   const points = race.type === "points";
-  const schedule = sprintSchedule(race.laps, race.track);
+  const schedule = sprintSchedule(race.laps, race.track, race.sprintEvery);
   const rows = [points ? [...pointsHeaders(schedule).slice(0, 3), "隊伍／學校", "國家／地區", ...pointsHeaders(schedule).slice(3)]
     : ["名次", "背號", "姓名", "隊伍／學校", "國家／地區", "得圈／狀態"]];
   for (const rider of standings(race)) {
