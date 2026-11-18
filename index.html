@@ -70,6 +70,7 @@ header{margin-bottom:12px}
 @media(min-width:760px) and (max-width:1100px){.layout{grid-template-columns:minmax(270px,32%) minmax(0,1fr)}}
 @media(max-width:759px){.layout{grid-template-columns:1fr}#entry{position:static}#entry .riders{grid-template-columns:repeat(5,minmax(0,1fr))}}
 @media print{.results-panel{padding:0}.results-table .total{color:black;background:white}.positive,.negative{color:black}}
+.photo-columns{display:grid;grid-template-columns:1fr 1fr;gap:16px}.photo-columns label{display:grid;gap:6px;margin:10px 0}.photo-columns .fields{grid-template-columns:1fr 1fr}@media(max-width:700px){.photo-columns{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -92,6 +93,7 @@ header{margin-bottom:12px}
       <table class="roster-table"><thead><tr><th scope="col">背號</th><th scope="col">姓名</th><th scope="col">隊伍／學校</th><th scope="col">國家／地區</th><th scope="col">操作</th></tr></thead><tbody id="rosterRows"></tbody></table>
     </div>
     <div class="actions setup-tools"><button type="button" id="addRider">新增選手</button><button type="button" id="demo">填入示範名單</button></div>
+    <div class="actions setup-tools"><button type="button" id="photoOpen">拍照／照片辨識名單</button></div>
     <details id="pasteDetails"><summary>貼上 Excel 名單</summary><label>依序貼上背號、姓名、隊伍／學校、國家／地區<textarea id="rosterPaste" rows="4"></textarea></label><button type="button" id="pasteRoster">匯入到表格</button></details>
     <p id="setupError" class="note" role="status"></p><button class="primary" type="submit">開始賽事</button>
   </form>
@@ -101,7 +103,7 @@ header{margin-bottom:12px}
   <div class="race-summary"><strong id="next"></strong><span id="instruction"></span></div>
   <div class="lap-counter" role="group" aria-label="現場圈數">
     <button id="lapDecrease" type="button">−1 圈</button>
-    <output aria-live="polite"><small id="lapLabel"></small><span id="lapDisplay"></span></output>
+    <label style="text-align:center"><small id="lapLabel" style="display:block;color:inherit"></small><input id="lapInput" type="number" min="0" step="1" inputmode="numeric" aria-label="現場圈數數值" style="width:100px;text-align:center;color:#192300;background:#fff;font-size:24px"></label>
     <button id="lapIncrease" type="button">＋1 圈</button>
   </div>
 </div>
@@ -111,6 +113,7 @@ header{margin-bottom:12px}
 <button id="roundMode" type="button">搶分</button>
 <button id="plus" type="button">套圈 ＋20</button>
 <button id="minus" type="button">落後一圈 −20</button>
+<button id="retire" type="button">退場 DNF</button>
 <button id="finishMode" type="button">終點順序</button>
 <button id="skip" type="button">待確認</button>
 </div>
@@ -130,6 +133,26 @@ header{margin-bottom:12px}
 </section></div>
 </div>
 </main>
+<dialog id="photoDialog" aria-labelledby="photoTitle" style="width:min(1100px,96vw)">
+  <div class="section-head"><h2 id="photoTitle">拍照辨識出發名單</h2><button type="button" id="photoClose">關閉</button></div>
+  <p class="meta">照片在此裝置辨識；首次需連網載入辨識工具。請逐列核對背號、姓名和隊伍，辨識結果不會直接覆蓋名單。</p>
+  <div class="actions setup-tools"><button type="button" id="takePhoto">拍攝出發單</button><button type="button" id="choosePhoto">選擇照片</button><button type="button" id="rotatePhoto" disabled>旋轉 90°</button></div>
+  <input id="cameraFile" type="file" accept="image/*" capture="environment" hidden>
+  <input id="photoFile" type="file" accept="image/*" hidden>
+  <div class="photo-columns">
+    <div><canvas id="photoPreview" hidden style="max-width:100%;height:auto;background:white"></canvas></div>
+    <div>
+      <label>名單格式<select id="photoFormat"><option value="domestic">國內：背號、姓名、隊伍、UCI 證號</option><option value="international">國際：背號、姓名、國家／地區</option></select></label>
+      <details><summary>調整欄位位置（對照照片）</summary><p class="meta">填入各欄左側位置，占照片寬度的百分比。最後一欄填 UCI 證號或備註的左側，避免混入名單。</p>
+      <div class="fields"><label>背號起點 %<input id="photoBibX" type="number" min="0" max="100" value="13"></label><label>姓名起點 %<input id="photoNameX" type="number" min="0" max="100" value="22"></label><label id="photoTeamLabel">隊伍起點 %<input id="photoTeamX" type="number" min="0" max="100" value="38"></label><label>名單終點 %<input id="photoEndX" type="number" min="0" max="100" value="59"></label></div></details>
+      <button type="button" class="primary" id="recognizePhoto" disabled>開始辨識</button>
+      <p id="photoStatus" class="note" role="status" aria-live="polite"></p>
+      <label>核對與修正名單（每列：背號、姓名、隊伍、國家；欄位以 Tab 分隔）<textarea id="photoRoster" rows="12" spellcheck="false" placeholder="辨識後可在這裡修正；亦可貼上已整理的四欄名單。"></textarea></label>
+      <label style="display:flex;align-items:center;gap:8px"><input id="photoChecked" type="checkbox">我已對照原圖核對選手人數與資料</label>
+      <button type="button" id="photoImport" class="primary">確認匯入名單</button>
+    </div>
+  </div>
+</dialog>
 <dialog id="resetDialog" aria-labelledby="resetTitle">
   <div class="section-head"><h2 id="resetTitle">清除本場資料</h2></div>
   <p>清除本場選手名單、圈數和計分紀錄，並返回賽制選擇。</p>
@@ -189,7 +212,7 @@ function sprintSchedule(laps, track) {
 function standings(race) {
   const finish = race.events.findLast(event => event.kind === "finish")?.bibs || [];
   const removed = race.events.filter(event => event.kind === "out").map(event => event.bibs[0]);
-  const lapped = new Set(race.events.filter(event => event.kind === "lapped").flatMap(event => event.bibs));
+  const lapped = new Set(race.events.filter(event => ["lapped", "retired"].includes(event.kind)).flatMap(event => event.bibs));
   const riders = race.roster.map(rider => ({
     ...rider, points: 0, sprintPoints: [], gainPoints: 0, lossPoints: 0, lastChange: 0, lapsGained: 0, eliminated: removed.includes(rider.bib), lapped: lapped.has(rider.bib), rank: null
   }));
@@ -200,7 +223,7 @@ function standings(race) {
     if (event.kind === "plus" || event.kind === "minus") {
       for (const bib of event.bibs) {
         const rider = byBib.get(bib);
-        if (race.type === "scratch") rider.lapsGained++;
+        if (race.type === "scratch") rider.lapsGained += event.kind === "plus" ? 1 : -1;
         else {
           const value = event.kind === "plus" ? 20 : -20;
           rider.points += value;
@@ -225,10 +248,10 @@ function standings(race) {
   const order = [...finalSprint, ...finish.filter(bib => !finalSprint.includes(bib))];
   const position = bib => order.includes(bib) ? order.indexOf(bib) : Infinity;
   if (race.type === "points") {
-    riders.sort((a, b) => b.points - a.points || position(a.bib) - position(b.bib) || a.bib.localeCompare(b.bib, "zh-Hant", { numeric: true }));
+    riders.sort((a, b) => Number(a.lapped) - Number(b.lapped) || b.points - a.points || position(a.bib) - position(b.bib) || a.bib.localeCompare(b.bib, "zh-Hant", { numeric: true }));
     riders.forEach((rider, index) => {
       const unresolvedTie = !Number.isFinite(position(rider.bib)) && riders.some(other => other !== rider && other.points === rider.points && !Number.isFinite(position(other.bib)));
-      if (!unresolvedTie) rider.rank = index + 1;
+      if (!rider.lapped && !unresolvedTie) rider.rank = index + 1;
     });
   } else if (race.type === "scratch") {
     riders.sort((a, b) => Number(a.lapped) - Number(b.lapped) ||
@@ -238,10 +261,10 @@ function standings(race) {
     });
   } else {
     for (const rider of riders) {
-      if (rider.eliminated) rider.rank = riders.length - removed.indexOf(rider.bib);
+      if (rider.eliminated) rider.rank = riders.filter(other => !other.lapped).length - removed.indexOf(rider.bib);
       else if (finish.includes(rider.bib)) rider.rank = finish.indexOf(rider.bib) + 1;
     }
-    riders.sort((a, b) => (a.rank ?? 0) - (b.rank ?? 0));
+    riders.sort((a, b) => Number(a.lapped) - Number(b.lapped) || (a.rank ?? 0) - (b.rank ?? 0));
   }
   return riders;
 }
@@ -250,7 +273,7 @@ function getContext() {
   const points = race.type === "points";
   const scratch = race.type === "scratch";
   const rounds = race.events.filter(event => ["sprint", "out", "skip"].includes(event.kind)).length;
-  const retired = new Set(race.events.filter(event => ["out", "lapped"].includes(event.kind)).flatMap(event => event.bibs));
+  const retired = new Set(race.events.filter(event => ["out", "lapped", "retired"].includes(event.kind)).flatMap(event => event.bibs));
   const remaining = race.roster.length - retired.size;
   const schedule = sprintSchedule(race.laps, race.track);
   return { points, scratch, round: rounds + 1, remaining, schedule, ended: points ? rounds >= schedule.length : race.events.some(event => event.kind === "finish") };
@@ -276,7 +299,7 @@ function signedPoints(value) {
 function pointsHeaders(schedule) {
   return ["名次", "背號", "姓名／隊伍", "總分", "本次增減",
     ...schedule.map((lap, index) => "S" + (index + 1) + (index === schedule.length - 1 ? " ×2" : "")),
-    "套圈加分", "落後扣分", "圈分合計", "終點順序"];
+    "套圈加分", "落後扣分", "圈分合計", "終點順序", "狀態"];
 }
 
 function pointsValues(rider, schedule, events) {
@@ -284,12 +307,12 @@ function pointsValues(rider, schedule, events) {
   const finalSprint = events.find(event => event.kind === "sprint" && event.round === schedule.length)?.bibs || [];
   const finishOrder = [...finalSprint, ...finish.filter(bib => !finalSprint.includes(bib))];
   const place = finishOrder.indexOf(rider.bib);
-  return [rider.rank ?? "同分", rider.bib, rider.name || "", rider.points, signedPoints(rider.lastChange),
+  return [rider.lapped ? "DNF" : rider.rank ?? "同分", rider.bib, rider.name || "", rider.points, signedPoints(rider.lastChange),
     ...schedule.map((lap, index) => {
       const event = events.find(event => ["sprint", "skip"].includes(event.kind) && event.round === index + 1);
       return event?.kind === "skip" ? "待補" : event ? (rider.sprintPoints[index] || 0) : "—";
     }), signedPoints(rider.gainPoints), signedPoints(rider.lossPoints),
-    signedPoints(rider.gainPoints + rider.lossPoints), place >= 0 ? place + 1 : "—"];
+    signedPoints(rider.gainPoints + rider.lossPoints), place >= 0 ? place + 1 : "—", rider.lapped ? "退場 DNF" : "在場／完賽"];
 }
 
 function renderResults(riders, context, pending) {
@@ -333,12 +356,17 @@ function lapCount() {
   return race.lapCount ?? (race.type === "elimination" ? 0 : race.laps);
 }
 
-function changeLapCount(delta) {
-  const max = race.type === "elimination" ? Infinity : race.laps;
-  race.lapCount = Math.max(0, Math.min(max, lapCount() + delta));
+function setLapCount(value) {
+  if (!Number.isSafeInteger(value) || value < 0) {
+    $("message").textContent = "圈數請輸入 0 或正整數。";
+    $("lapInput").value = lapCount();
+    return;
+  }
+  race.lapCount = value;
   persist();
   render();
 }
+function changeLapCount(delta) { setLapCount(Math.max(0, lapCount() + delta)); }
 
 function render() {
   const context = getContext();
@@ -346,7 +374,7 @@ function render() {
   const riders = standings(race);
   const onTrack = new Set(riders.filter(rider => !rider.eliminated && !rider.lapped).map(rider => rider.bib));
   const pending = race.events.some(event => event.kind === "skip") && points;
-  const labelsByMode = { round: scratch ? "終點順序" : points ? "搶分 · 依序選前四名" : "選擇淘汰選手", plus: "套圈 · 選擇選手", minus: "落後一圈 · 選擇選手", lapped: "被套圈退場選手", finish: "終點順序" };
+  const labelsByMode = { round: scratch ? "終點順序" : points ? "搶分 · 依序選前四名" : "選擇淘汰選手", plus: "套圈 · 選擇選手", minus: "被套圈 · 繼續比賽", retired: "退場 DNF · 選擇選手", finish: "終點順序" };
   $("raceInfo").textContent = race.name + "・" + labels[race.type] + "・" + race.track + " m";
   $("next").textContent = points
     ? (ended ? "已記到終點" : "下一次衝刺 · 剩 " + (race.laps - schedule[round - 1]) + " 圈")
@@ -357,9 +385,9 @@ function render() {
     : (ended ? "已記錄決勝順序" : remaining === 2 ? "最後兩人決勝" : "第 " + round + " 輪 · 每 " + (race.track === "250" ? 2 : 1) + " 圈淘汰");
   const lapsOnBoard = lapCount();
   $("lapLabel").textContent = points || scratch ? "現場剩餘" : "已騎圈數";
-  $("lapDisplay").textContent = lapsOnBoard + " 圈";
+  $("lapInput").value = lapsOnBoard;
   $("lapDecrease").disabled = lapsOnBoard === 0;
-  $("lapIncrease").disabled = (points || scratch) && lapsOnBoard === race.laps;
+  $("lapIncrease").disabled = false;
   $("fieldCount").textContent = race.roster.length + " 人名單";
   $("selectionTitle").textContent = editIndex === null ? labelsByMode[mode] : "補記第 " + race.events[editIndex].round + " 次衝刺";
   $("picked").textContent = selected.length ? selected.map(bib => {
@@ -381,7 +409,9 @@ function render() {
   $("roundMode").disabled = ended;
   $("roundMode").setAttribute("aria-pressed", String(mode === "round"));
   $("plus").textContent = scratch ? "套圈 ＋1 圈" : "套圈 ＋20";
-  $("minus").textContent = scratch ? "被套圈退場" : "落後一圈 −20";
+  $("minus").textContent = scratch ? "被套圈 −1 圈" : "被套圈 −20";
+  $("retire").disabled = ended;
+  $("retire").setAttribute("aria-pressed", String(mode === "retired"));
   $("plus").disabled = $("minus").disabled = ended;
   $("plus").setAttribute("aria-pressed", String(mode === "plus"));
   $("minus").setAttribute("aria-pressed", String(mode === "minus" || mode === "lapped"));
@@ -396,14 +426,15 @@ function render() {
   $("undo").disabled = !race.events.length;
   const recordingScratchFinish = scratch && (mode === "round" || mode === "finish");
   const needed = recordingScratchFinish ? Math.max(1, remaining)
-    : points && mode === "round" ? 4 : !points && !scratch && remaining === 2 ? 2 : 1;
+    : points && mode === "round" ? 4 : !points && !scratch && mode === "round" && remaining === 2 ? 2 : 1;
   $("confirm").disabled = selected.length < needed;
   $("saveState").textContent = saved ? "此裝置儲存" : "儲存失敗";
   renderResults(riders, context, pending);
 }
 
 function riderStatus(rider) {
-  if (race.type === "scratch") return rider.lapped ? "套圈退場" : rider.lapsGained + " 圈";
+  if (rider.lapped) return "退場 DNF";
+  if (race.type === "scratch") return signedPoints(rider.lapsGained) + " 圈";
   return rider.eliminated ? "淘汰" : rider.rank ? "完賽" : "在場";
 }
 
@@ -441,7 +472,8 @@ $("undo").onclick = () => {
 $("skip").onclick = () => record({ kind: "skip", round: getContext().round, bibs: [] });
 $("roundMode").onclick = () => changeMode("round");
 $("plus").onclick = () => changeMode("plus");
-$("minus").onclick = () => changeMode(race.type === "scratch" ? "lapped" : "minus");
+$("minus").onclick = () => changeMode("minus");
+$("retire").onclick = () => changeMode("retired");
 $("finishMode").onclick = () => {
   changeMode("finish");
   const final = race.events.findLast(event => event.kind === "finish");
@@ -449,7 +481,7 @@ $("finishMode").onclick = () => {
   render();
 };
 $("historyOpen").onclick = () => {
-  const names = { sprint: "衝刺", out: "淘汰", plus: "得圈", minus: "失圈", lapped: "被套圈退場", finish: "終點", skip: race.type === "points" ? "待確認" : "無淘汰" };
+  const names = { sprint: "衝刺", out: "淘汰", plus: "得圈", minus: "被套圈（仍在場）", lapped: "被套圈退場（舊紀錄）", retired: "退場 DNF", finish: "終點", skip: race.type === "points" ? "待確認" : "無淘汰" };
   $("log").replaceChildren(...race.events.map((event, index) => {
     const item = document.createElement("li");
     item.textContent = (["sprint", "out", "skip"].includes(event.kind) ? "第 " + event.round + " 輪 · " : "") + names[event.kind] + " " + event.bibs.join(" → ");
@@ -479,6 +511,8 @@ function parseRosterRows(rows) {
 
 $("lapDecrease").onclick = () => changeLapCount(-1);
 $("lapIncrease").onclick = () => changeLapCount(1);
+$("lapInput").onchange = event => setLapCount(event.target.value.trim() === "" ? NaN : Number(event.target.value));
+$("lapInput").onkeydown = event => { if (event.key === "Enter") { event.preventDefault(); event.target.blur(); } };
 function addRosterRow(rider = {}) {
   const row = document.createElement("tr");
   const fields = [["bib", "背號"], ["name", "姓名"], ["team", "隊伍／學校"], ["country", "國家／地區"]];
@@ -592,5 +626,6 @@ if (race) persist();
 showSetup();
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js").catch(() => {});
 </script>
+<script src="./photo-import.js"></script>
 </body>
 </html>
