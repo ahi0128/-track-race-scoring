@@ -85,7 +85,7 @@ header{margin-bottom:12px}
     <h2 id="chooseTitle" tabindex="-1">選擇賽制</h2>
     <div class="disciplines">
       <button type="button" data-discipline="points">領先計分</button>
-      <button type="button" data-discipline="scratch">集體出發</button>
+      <button type="button" data-discipline="scratch">集體出發</button><button type="button" data-discipline="tempo">Tempo Race</button>
       <button type="button" data-discipline="elimination">落後淘汰</button>
     </div>
     <div id="resumeRow" class="actions resume" hidden><button type="button" id="resumeRace">繼續本場</button><span id="resumeName" class="meta"></span></div>
@@ -93,6 +93,7 @@ header{margin-bottom:12px}
   <form id="setupForm" hidden>
     <div class="section-head"><h2 id="setupTitle" tabindex="-1"></h2><button type="button" id="backToTypes">返回賽制選擇</button></div>
     <div class="fields"><label>賽事名稱<input id="raceName" maxlength="70" placeholder="選填"></label><label>每圈長度（m）<input id="track" type="number" inputmode="decimal" min="0.01" step="any" value="250" list="trackSizes" required><datalist id="trackSizes"><option value="250"><option value="333"><option value="333.33"><option value="400"><option value="500"></datalist></label><label id="lapsField">總圈數<input type="number" id="laps" min="1" max="400" value="40" required></label></div>
+    <div id="tempoSetup" hidden><h2>Tempo 計分設定</h2><div class="fields"><label>第一個搶分圈<input id="setupTempoFirst" type="number" min="1" step="1" value="5"></label><label>搶分間隔（圈）<input id="setupTempoEvery" type="number" min="1" step="1" value="1"></label><label>第一名得分<input id="setupTempoWin" type="number" min="1" step="1" value="1"></label><label>套圈加分<input id="setupTempoGain" type="number" min="0" step="1" value="20"></label><label>落後一圈扣分<input id="setupTempoLoss" type="number" min="0" step="1" value="20"></label></div><p class="meta">預設第五圈開始，每圈第一名 1 分；末圈不加倍。總圈數請填於上方。</p></div>
     <div id="pointsSetup" hidden>
       <label>搶分次數（含最後一次雙倍分）<input id="setupSprintCount" type="number" min="1" max="1000" step="1" value="4"></label>
       <label style="display:flex;gap:8px;align-items:center"><input id="setupOmnium" type="checkbox">全能賽：帶入前項累積積分</label>
@@ -170,6 +171,12 @@ header{margin-bottom:12px}
     </div>
   </div>
 </dialog>
+<dialog id="tempoDialog" aria-labelledby="tempoTitle" style="width:min(800px,96vw)"><form id="tempoForm">
+<div class="section-head"><h2 id="tempoTitle">Tempo 計分設定</h2><button type="button" data-close="tempoDialog">取消</button></div>
+<label>總圈數<input id="editTempoLaps" type="number" min="1" max="1000" step="1" required></label><div class="fields"><label>第一個搶分圈<input id="editTempoFirst" type="number" min="1" step="1" value="5"></label><label>搶分間隔（圈）<input id="editTempoEvery" type="number" min="1" step="1" value="1"></label><label>第一名得分<input id="editTempoWin" type="number" min="1" step="1" value="1"></label><label>套圈加分<input id="editTempoGain" type="number" min="0" step="1" value="20"></label><label>落後一圈扣分<input id="editTempoLoss" type="number" min="0" step="1" value="20"></label></div>
+<p class="meta">末圈不加倍。Tempo 單項積分不直接累加為全能總積分。修改得分設定後，已記錄積分會重新計算；已記錄搶分時，起始圈與間隔需先撤銷紀錄才能改動。</p>
+<p id="tempoError" class="note" role="status"></p><button class="primary" type="submit">儲存 Tempo 設定</button>
+</form></dialog>
 <dialog id="scoringDialog" aria-labelledby="scoringTitle" style="width:min(800px,96vw)">
 <form id="scoringForm">
   <div class="section-head"><h2 id="scoringTitle">計分設定</h2><button type="button" data-close="scoringDialog">取消</button></div>
@@ -207,7 +214,7 @@ header{margin-bottom:12px}
 <script>
 "use strict";
 const key = "track-race-scoring-v1";
-const labels = { points: "領先計分", scratch: "集體出發", elimination: "落後淘汰" };
+const labels = { points: "領先計分", scratch: "集體出發", tempo: "Tempo Race", elimination: "落後淘汰" };
 const $ = id => document.getElementById(id);
 const demoNames = [
   "林昱安", "陳語晴", "張柏睿", "黃品妍", "李承恩", "王芷寧", "吳奕辰", "劉書瑤", "蔡彥廷", "許映彤",
@@ -256,10 +263,23 @@ function sprintSchedule(laps, track, sprintEvery, count) {
   return rounds;
 }
 
+function tempoConfig(race) {
+  return { first: 5, every: 1, win: 1, gain: 20, loss: 20, ...race.tempo };
+}
+function raceSchedule(race) {
+  if (race.type === "tempo") {
+    const settings = tempoConfig(race);
+    const rounds = [];
+    for (let lap = settings.first; lap <= race.laps; lap += settings.every) rounds.push(lap);
+    if (rounds.at(-1) !== race.laps) rounds.push(race.laps);
+    return rounds;
+  }
+  return sprintSchedule(race.laps, race.track, race.sprintEvery, race.sprintCount);
+}
 function finishEvent(race) {
-  const count = sprintSchedule(race.laps, race.track, race.sprintEvery, race.sprintCount).length;
+  const count = raceSchedule(race).length;
   return race.events.findLast(event => event.kind === "finish" &&
-    (race.type !== "points" || event.sprintCount === undefined || event.sprintCount === count));
+    (!["points", "tempo"].includes(race.type) || event.sprintCount === undefined || event.sprintCount === count));
 }
 function standings(race) {
   const finish = finishEvent(race)?.bibs || [];
@@ -268,8 +288,10 @@ function standings(race) {
   const riders = race.roster.map(rider => ({
     ...rider, startingPoints: race.omnium ? Number(rider.startPoints || 0) : 0, points: race.omnium ? Number(rider.startPoints || 0) : 0, sprintPoints: [], gainPoints: 0, lossPoints: 0, lastChange: 0, lapsGained: 0, eliminated: removed.includes(rider.bib), lapped: lapped.has(rider.bib), rank: null
   }));
+  const tempo = race.type === "tempo";
+  const tempoRules = tempoConfig(race);
   const byBib = new Map(riders.map(rider => [rider.bib, rider]));
-  const schedule = sprintSchedule(race.laps, race.track, race.sprintEvery, race.sprintCount);
+  const schedule = raceSchedule(race);
   const latest = race.events.findLast(event => ["sprint", "plus", "minus"].includes(event.kind));
   for (const event of race.events) {
     if (event.kind === "plus" || event.kind === "minus") {
@@ -277,7 +299,7 @@ function standings(race) {
         const rider = byBib.get(bib);
         if (race.type === "scratch") rider.lapsGained += event.kind === "plus" ? 1 : -1;
         else {
-          const value = event.kind === "plus" ? 20 : -20;
+          const value = event.kind === "plus" ? (tempo ? tempoRules.gain : 20) : -(tempo ? tempoRules.loss : 20);
           rider.points += value;
           if (value > 0) rider.gainPoints += value;
           else rider.lossPoints += value;
@@ -286,10 +308,10 @@ function standings(race) {
       }
     }
     if (event.kind === "sprint") {
-      const multiplier = event.round === schedule.length ? 2 : 1;
+      const multiplier = !tempo && event.round === schedule.length ? 2 : 1;
       event.bibs.forEach((bib, index) => {
         const rider = byBib.get(bib);
-        const value = [5, 3, 2, 1][index] * multiplier;
+        const value = tempo ? (index === 0 ? tempoRules.win : 0) : [5, 3, 2, 1][index] * multiplier;
         rider.points += value;
         rider.sprintPoints[event.round - 1] = value;
         if (event === latest) rider.lastChange += value;
@@ -299,7 +321,7 @@ function standings(race) {
   const finalSprint = race.events.find(event => event.kind === "sprint" && event.round === schedule.length)?.bibs || [];
   const order = [...finalSprint, ...finish.filter(bib => !finalSprint.includes(bib))];
   const position = bib => order.includes(bib) ? order.indexOf(bib) : Infinity;
-  if (race.type === "points") {
+  if (["points", "tempo"].includes(race.type)) {
     riders.sort((a, b) => Number(a.lapped) - Number(b.lapped) || b.points - a.points || position(a.bib) - position(b.bib) || a.bib.localeCompare(b.bib, "zh-Hant", { numeric: true }));
     riders.forEach((rider, index) => {
       const unresolvedTie = !Number.isFinite(position(rider.bib)) && riders.some(other => !other.lapped && other !== rider && other.points === rider.points && !Number.isFinite(position(other.bib)));
@@ -322,13 +344,14 @@ function standings(race) {
 }
 
 function getContext() {
-  const points = race.type === "points";
+  const points = ["points", "tempo"].includes(race.type);
   const scratch = race.type === "scratch";
+  const tempo = race.type === "tempo";
   const rounds = race.events.filter(event => ["sprint", "out", "skip"].includes(event.kind)).length;
   const retired = new Set(race.events.filter(event => ["out", "lapped", "retired"].includes(event.kind)).flatMap(event => event.bibs));
   const remaining = race.roster.length - retired.size;
-  const schedule = sprintSchedule(race.laps, race.track, race.sprintEvery, race.sprintCount);
-  return { points, scratch, round: rounds + 1, remaining, schedule, ended: points ? rounds >= schedule.length : race.events.some(event => event.kind === "finish") };
+  const schedule = raceSchedule(race);
+  return { points, scratch, tempo, round: rounds + 1, remaining, schedule, ended: points ? rounds >= schedule.length : race.events.some(event => event.kind === "finish") };
 }
 
 function escapeHtml(value) {
@@ -351,7 +374,7 @@ function signedPoints(value) {
 function pointsHeaders(schedule) {
   return ["名次", "背號", "姓名／隊伍", race.omnium ? "全能合計" : "總分", "本次增減",
     ...(race.omnium ? ["賽前積分", "本場得分"] : []),
-    ...schedule.map((lap, index) => "S" + (index + 1) + (index === schedule.length - 1 ? " ×2" : "")),
+    ...schedule.map((lap, index) => race.type === "tempo" ? "L" + lap : "S" + (index + 1) + (index === schedule.length - 1 ? " ×2" : "")),
     "套圈加分", "落後扣分", "圈分合計", "終點順序", "狀態"];
 }
 
@@ -372,7 +395,7 @@ function pointsValues(rider, schedule, events) {
 function renderResults(riders, context, pending) {
   const { points, schedule, ended } = context;
   const finalRecorded = Boolean(finishEvent(race));
-  $("resultTitle").textContent = points ? (race.omnium ? "全能賽即時總積分" : "全體選手即時積分") : "全體選手即時排名";
+  $("resultTitle").textContent = points ? (race.type === "tempo" ? "Tempo 單項即時積分" : race.omnium ? "全能賽即時總積分" : "全體選手即時積分") : "全體選手即時排名";
   if (ended && !pending && (!points || finalRecorded)) $("resultTitle").textContent += "・完賽";
   const latest = race.events.findLast(event => ["sprint", "plus", "minus"].includes(event.kind));
   const changeName = latest?.kind === "sprint" ? "第 " + latest.round + " 次搶分"
@@ -481,12 +504,13 @@ function changeLapCount(delta) {
 
 function render() {
   const context = getContext();
-  const { points, scratch, round, schedule, remaining, ended } = context;
+  const { points, scratch, tempo, round, schedule, remaining, ended } = context;
   const riders = standings(race);
   const onTrack = new Set(riders.filter(rider => !rider.eliminated && !rider.lapped).map(rider => rider.bib));
   const pending = race.events.some(event => event.kind === "skip") && points;
-  const labelsByMode = { round: scratch ? "終點順序" : points ? "搶分 · 依序選前四名" : "選擇淘汰選手", plus: "套圈 · 選擇選手", minus: "被套圈 · 繼續比賽", retired: "退場 DNF · 選擇選手", finish: "終點順序" };
+  const labelsByMode = { round: scratch ? "終點順序" : points ? (tempo ? "本圈搶分 · 選擇第一名" : "搶分 · 依序選前四名") : "選擇淘汰選手", plus: "套圈 · 選擇選手", minus: "被套圈 · 繼續比賽", retired: "退場 DNF · 選擇選手", finish: "終點順序" };
   $("scoringOpen").hidden = !points;
+  $("scoringOpen").textContent = tempo ? "Tempo 設定" : "計分設定";
   $("raceInfo").textContent = race.name + "・" + labels[race.type] + "・" + race.track + " m";
   $("next").textContent = points
     ? (ended ? "已記到終點" : (schedule[round - 1] === null ? "下一次搶分 · 第 " + round + "／" + schedule.length + " 次" : "下一次衝刺 · 剩 " + (race.laps - schedule[round - 1]) + " 圈"))
@@ -495,6 +519,11 @@ function render() {
     ? (ended ? (pending ? "有待補的衝刺紀錄" : "可補登終點順序") : (schedule[round - 1] === null ? "依現場規程搶分 · 最後一次雙倍" : "第 " + round + " 次衝刺 · 完成第 " + schedule[round - 1] + " 圈"))
     : scratch ? (ended ? "已記錄終點順序" : "終點依序點選完賽選手")
     : (ended ? "已記錄決勝順序" : remaining === 2 ? "最後兩人決勝" : "第 " + round + " 輪 · 每 " + (race.eliminationEvery || (race.track === "250" ? 2 : 1)) + " 圈淘汰");
+  if (tempo) {
+    $("next").textContent = ended ? "Tempo 搶分已記完" : "下一搶分 · 完成第 " + schedule[round - 1] + " 圈";
+    $("instruction").textContent = ended ? (pending ? "有待補紀錄，請確認並補登終點順序" : "請補登終點順序，作為同分判定依據")
+      : "第 " + round + "／" + schedule.length + " 次 · 第一名 " + tempoConfig(race).win + " 分 · 末圈不加倍";
+  }
   const lapsOnBoard = lapCount();
   $("lapLabel").textContent = points || scratch ? "現場剩餘" : "已騎圈數";
   $("lapInput").value = lapsOnBoard;
@@ -517,11 +546,11 @@ function render() {
     return button;
   }));
   $("plus").hidden = $("minus").hidden = !points && !scratch;
-  $("roundMode").textContent = points ? "搶分" : scratch ? "終點順序" : "淘汰";
+  $("roundMode").textContent = tempo ? "本圈第一名" : points ? "搶分" : scratch ? "終點順序" : "淘汰";
   $("roundMode").disabled = ended;
   $("roundMode").setAttribute("aria-pressed", String(mode === "round"));
-  $("plus").textContent = scratch ? "套圈 ＋1 圈" : "套圈 ＋20";
-  $("minus").textContent = scratch ? "被套圈 −1 圈" : "被套圈 −20";
+  $("plus").textContent = scratch ? "套圈 ＋1 圈" : "套圈 ＋" + (tempo ? tempoConfig(race).gain : 20);
+  $("minus").textContent = scratch ? "被套圈 −1 圈" : "被套圈 −" + (tempo ? tempoConfig(race).loss : 20);
   $("retire").disabled = ended;
   $("retire").setAttribute("aria-pressed", String(mode === "retired"));
   $("plus").disabled = $("minus").disabled = ended;
@@ -536,9 +565,9 @@ function render() {
   $("clear").disabled = editIndex === null && mode === "round" && !selected.length;
   $("clear").textContent = editIndex !== null || mode !== "round" ? "取消" : "清除本次點選";
   $("undo").disabled = !race.events.length;
-  const recordingScratchFinish = scratch && (mode === "round" || mode === "finish");
+  const recordingScratchFinish = (scratch && (mode === "round" || mode === "finish")) || (tempo && mode === "finish");
   const needed = recordingScratchFinish ? Math.max(1, remaining)
-    : points && mode === "round" ? 4 : !points && !scratch && mode === "round" && remaining === 2 ? 2 : 1;
+    : points && mode === "round" ? (tempo ? 1 : 4) : !points && !scratch && mode === "round" && remaining === 2 ? 2 : 1;
   $("confirm").disabled = selected.length < needed;
   $("saveState").textContent = saved ? "此裝置儲存" : "儲存失敗";
   renderResults(riders, context, pending);
@@ -552,7 +581,7 @@ function riderStatus(rider) {
 }
 
 function pick(bib, context) {
-  const max = mode !== "round" || context.scratch ? race.roster.length : context.points ? 4 : context.remaining === 2 ? 2 : 1;
+  const max = mode !== "round" || context.scratch ? race.roster.length : context.tempo ? 1 : context.points ? 4 : context.remaining === 2 ? 2 : 1;
   if (selected.includes(bib)) selected = selected.filter(item => item !== bib);
   else if (max === 1) selected = [bib];
   else if (selected.length < max) selected.push(bib);
@@ -594,11 +623,11 @@ $("finishMode").onclick = () => {
   render();
 };
 $("historyOpen").onclick = () => {
-  const names = { sprint: "衝刺", out: "淘汰", plus: "得圈", minus: "被套圈（仍在場）", lapped: "被套圈退場（舊紀錄）", retired: "退場 DNF", finish: "終點", skip: race.type === "points" ? "待確認" : "無淘汰" };
+  const names = { sprint: "衝刺", out: "淘汰", plus: "得圈", minus: "被套圈（仍在場）", lapped: "被套圈退場（舊紀錄）", retired: "退場 DNF", finish: "終點", skip: ["points", "tempo"].includes(race.type) ? "待確認" : "無淘汰" };
   $("log").replaceChildren(...race.events.map((event, index) => {
     const item = document.createElement("li");
     item.textContent = (["sprint", "out", "skip"].includes(event.kind) ? "第 " + event.round + " 輪 · " : "") + names[event.kind] + " " + event.bibs.join(" → ");
-    if (race.type === "points" && ["skip", "sprint"].includes(event.kind)) {
+    if (["points", "tempo"].includes(race.type) && ["skip", "sprint"].includes(event.kind)) {
       const edit = document.createElement("button");
       edit.textContent = event.kind === "skip" ? "補登" : "修改";
       edit.onclick = () => { $("history").close(); changeMode("round"); editIndex = index; selected = [...event.bibs]; render(); };
@@ -675,6 +704,7 @@ document.querySelectorAll("[data-discipline]").forEach(button => {
     $("setupTitle").textContent = labels[setupType] + "・選手名單";
     $("lapsField").hidden = $("laps").disabled = setupType === "elimination";
     $("pointsSetup").hidden = setupType !== "points";
+    $("tempoSetup").hidden = setupType !== "tempo";
     $("setupSprintCount").value = sprintSchedule(Number($("laps").value), $("track").value).length;
     $("startingHeader").hidden = true;
     $("pasteDetails").open = false;
@@ -712,13 +742,60 @@ $("setupForm").onsubmit = event => {
     for (const rider of roster) rider.startPoints = bases.get(rider.bib) || 0;
     const min = setupType === "points" ? 4 : 2;
     if (roster.length < min || roster.length > 40) throw new Error(labels[setupType] + "需要 " + min + "–40 位選手。");
+    const tempo = setupType === "tempo" ? readTempoFields("setupTempo", $("laps").value) : undefined;
     const trackLength = validTrackLength($("track").value);
     if (race && !window.confirm("開始新賽事將取代本裝置的現有賽事。確定繼續？")) return;
     race = { name: $("raceName").value.trim() || labels[setupType], type: setupType,
-      track: String(trackLength), laps: Number($("laps").value), roster, events: [], omnium, sprintCount: count };
+      track: String(trackLength), laps: Number($("laps").value), roster, events: [], omnium, sprintCount: count, tempo };
     persist();
     showRace();
   } catch (error) { $("setupError").textContent = error.message; }
+};
+function validTempoSettings(laps, settings) {
+  const total = Number(laps);
+  if (!Number.isSafeInteger(total) || total < 1 || total > 1000) throw new Error("總圈數請輸入 1–1000 的整數。");
+  const values = Object.fromEntries(["first", "every", "win", "gain", "loss"].map(key => [key, Number(settings[key])]));
+  if (!Object.values(values).every(Number.isSafeInteger) || values.first < 1 || values.first > total ||
+      values.every < 1 || values.win < 1 || values.gain < 0 || values.loss < 0) {
+    throw new Error("起始圈須介於 1 與總圈數之間；間隔及第一名得分須大於 0，套圈加扣分不能為負數。");
+  }
+  return values;
+}
+function readTempoFields(prefix, laps) {
+  const values = Object.fromEntries(["First", "Every", "Win", "Gain", "Loss"].map(name => [name.toLowerCase(), $(prefix + name).value]));
+  return validTempoSettings(laps, values);
+}
+function applyTempoSettings(laps, settings) {
+  const values = validTempoSettings(laps, settings);
+  const previous = tempoConfig(race);
+  const recorded = race.events.filter(event => ["sprint", "skip"].includes(event.kind));
+  if (recorded.length && (values.first !== previous.first || values.every !== previous.every)) {
+    throw new Error("已有搶分紀錄，請先撤銷搶分紀錄再修改起始圈或間隔。");
+  }
+  const proposed = { ...race, laps: Number(laps), tempo: values };
+  const newCount = raceSchedule(proposed).length;
+  if (recorded.some(event => event.round > newCount)) throw new Error("新總圈數會刪除已記錄的搶分欄，請先撤銷超出的紀錄。");
+  const oldCount = raceSchedule(race).length;
+  if (oldCount !== newCount) race.events = race.events.map(event => event.kind === "finish" && event.sprintCount === undefined ? { ...event, sprintCount: oldCount } : event);
+  race.laps = proposed.laps;
+  race.tempo = values;
+  persist();
+  changeMode("round");
+}
+function openTempoSettings() {
+  const values = tempoConfig(race);
+  $("editTempoLaps").value = race.laps;
+  for (const name of ["First", "Every", "Win", "Gain", "Loss"]) $("editTempo" + name).value = values[name.toLowerCase()];
+  $("tempoError").textContent = "";
+  $("tempoDialog").showModal();
+}
+$("tempoForm").onsubmit = event => {
+  event.preventDefault();
+  try {
+    const values = readTempoFields("editTempo", $("editTempoLaps").value);
+    applyTempoSettings($("editTempoLaps").value, values);
+    $("tempoDialog").close();
+  } catch (error) { $("tempoError").textContent = error.message; }
 };
 function validSprintCount(value) {
   const count = Number(value);
@@ -735,7 +812,7 @@ function applyScoringSettings(countValue, omnium, starting) {
   const lastRecorded = Math.max(0, ...race.events.filter(event => ["sprint", "skip"].includes(event.kind)).map(event => event.round));
   if (count < lastRecorded) throw new Error("已記錄到第 " + lastRecorded + " 次，請先撤銷超出新次數的搶分紀錄。");
   const roster = race.roster.map(rider => ({ ...rider, startPoints: validStartingPoints(starting[rider.bib] ?? rider.startPoints) }));
-  const previousCount = sprintSchedule(race.laps, race.track, race.sprintEvery, race.sprintCount).length;
+  const previousCount = raceSchedule(race).length;
   if (count !== previousCount) {
     race.events = race.events.map(event => event.kind === "finish" && event.sprintCount === undefined
       ? { ...event, sprintCount: previousCount } : event);
@@ -757,7 +834,8 @@ $("setupOmnium").onchange = () => {
   document.querySelectorAll("#rosterRows .starting-cell").forEach(cell => { cell.hidden = !$("setupOmnium").checked; });
 };
 $("scoringOpen").onclick = () => {
-  $("editSprintCount").value = sprintSchedule(race.laps, race.track, race.sprintEvery, race.sprintCount).length;
+  if (race.type === "tempo") { openTempoSettings(); return; }
+  $("editSprintCount").value = raceSchedule(race).length;
   $("editOmnium").checked = Boolean(race.omnium);
   $("startingEditor").hidden = !race.omnium;
   $("scoringError").textContent = "";
@@ -830,8 +908,8 @@ function csvCell(value) {
 }
 
 $("export").onclick = () => {
-  const points = race.type === "points";
-  const schedule = sprintSchedule(race.laps, race.track, race.sprintEvery, race.sprintCount);
+  const points = ["points", "tempo"].includes(race.type);
+  const schedule = raceSchedule(race);
   const rows = [points ? [...pointsHeaders(schedule).slice(0, 3), "隊伍／學校", "國家／地區", ...pointsHeaders(schedule).slice(3)]
     : ["名次", "背號", "姓名", "隊伍／學校", "國家／地區", "得圈／狀態"]];
   for (const rider of standings(race)) {
