@@ -79,7 +79,7 @@ header{margin-bottom:12px}
 </head>
 <body>
 <main>
-<header><div><h1>場地自由車計分台</h1><p class="sub" id="raceInfo"></p></div><div class="actions" id="raceActions" hidden><button id="setupOpen">新賽事</button><button id="trackOpen" type="button">場地設定</button><button id="historyOpen">記錄</button><button id="export">匯出 CSV</button><button id="resetOpen" class="reset-action">清除本場資料</button></div></header>
+<header><div><h1>場地自由車計分台</h1><p class="sub" id="raceInfo"></p></div><div class="actions" id="raceActions" hidden><button id="setupOpen">新賽事</button><button id="trackOpen" type="button">場地設定</button><button id="scoringOpen" type="button" hidden>計分設定</button><button id="historyOpen">記錄</button><button id="export">匯出 CSV</button><button id="resetOpen" class="reset-action">清除本場資料</button></div></header>
 <section id="setupView" class="panel setup-panel">
   <section id="chooseType" aria-labelledby="chooseTitle">
     <h2 id="chooseTitle" tabindex="-1">選擇賽制</h2>
@@ -93,8 +93,12 @@ header{margin-bottom:12px}
   <form id="setupForm" hidden>
     <div class="section-head"><h2 id="setupTitle" tabindex="-1"></h2><button type="button" id="backToTypes">返回賽制選擇</button></div>
     <div class="fields"><label>賽事名稱<input id="raceName" maxlength="70" placeholder="選填"></label><label>每圈長度（m）<input id="track" type="number" inputmode="decimal" min="0.01" step="any" value="250" list="trackSizes" required><datalist id="trackSizes"><option value="250"><option value="333"><option value="333.33"><option value="400"><option value="500"></datalist></label><label id="lapsField">總圈數<input type="number" id="laps" min="1" max="400" value="40" required></label></div>
+    <div id="pointsSetup" hidden>
+      <label>搶分次數（含最後一次雙倍分）<input id="setupSprintCount" type="number" min="1" max="1000" step="1" value="4"></label>
+      <label style="display:flex;gap:8px;align-items:center"><input id="setupOmnium" type="checkbox">全能賽：帶入前項累積積分</label>
+    </div>
     <div class="table-wrap" tabindex="0" aria-label="選手名單">
-      <table class="roster-table"><thead><tr><th scope="col">背號</th><th scope="col">姓名</th><th scope="col">隊伍／學校</th><th scope="col">國家／地區</th><th scope="col">操作</th></tr></thead><tbody id="rosterRows"></tbody></table>
+      <table class="roster-table"><thead><tr><th scope="col">背號</th><th scope="col">姓名</th><th scope="col">隊伍／學校</th><th scope="col">國家／地區</th><th scope="col" id="startingHeader" hidden>賽前積分</th><th scope="col">操作</th></tr></thead><tbody id="rosterRows"></tbody></table>
     </div>
     <div class="actions setup-tools"><button type="button" id="addRider">新增選手</button><button type="button" id="demo">填入示範名單</button></div>
     <div class="actions setup-tools"><button type="button" id="photoOpen">拍照／照片辨識名單</button></div>
@@ -166,6 +170,18 @@ header{margin-bottom:12px}
     </div>
   </div>
 </dialog>
+<dialog id="scoringDialog" aria-labelledby="scoringTitle" style="width:min(800px,96vw)">
+<form id="scoringForm">
+  <div class="section-head"><h2 id="scoringTitle">計分設定</h2><button type="button" data-close="scoringDialog">取消</button></div>
+  <label>搶分次數（含最後一次雙倍分）<span class="actions" style="justify-content:flex-start"><button id="sprintCountMinus" type="button" aria-label="減少一次搶分">−</button><input id="editSprintCount" type="number" min="1" max="1000" step="1" required style="width:100px"><button id="sprintCountPlus" type="button" aria-label="增加一次搶分">＋</button></span></label>
+  <p id="sprintPreview" class="meta"></p>
+  <p class="meta">最後一欄固定雙倍分（10、6、4、2）。改變次數後，原末欄會依新位置重新計算。已記錄的欄位不能直接刪除，需先撤銷超出次數的搶分紀錄。各次搶分時機依大會規程。</p>
+  <label style="display:flex;gap:8px;align-items:center"><input id="editOmnium" type="checkbox">全能賽：帶入前項累積積分</label>
+  <div id="startingEditor" hidden><p class="meta">輸入進入領先計分賽之前的累積積分；全能合計＝賽前積分＋本場得分。</p>
+  <div class="table-wrap"><table><thead><tr><th>背號</th><th>姓名／隊伍</th><th>賽前積分</th></tr></thead><tbody id="startingRows"></tbody></table></div></div>
+  <p id="scoringError" class="note" role="status"></p><button class="primary" type="submit">儲存計分設定</button>
+</form>
+</dialog>
 <dialog id="timerResetDialog" aria-labelledby="timerResetTitle">
   <h2 id="timerResetTitle">碼錶歸零</h2>
   <p>清除碼錶時間及計時距離，保留選手名單、計分紀錄和現場圈數。下次按「開始計時」重新起算。</p>
@@ -230,22 +246,30 @@ let mode = "round";
 let editIndex = null;
 let saved = true;
 
-function sprintSchedule(laps, track, sprintEvery) {
+function sprintSchedule(laps, track, sprintEvery, count) {
+  if (Number.isSafeInteger(count) && count > 0 && count <= 1000) {
+    return Array.from({ length: count }, (_, index) => index === count - 1 ? laps : null);
+  }
   const interval = sprintEvery || (track === "250" ? 10 : 8);
   const rounds = [laps];
   for (let lap = laps - interval; lap >= interval; lap -= interval) rounds.unshift(lap);
   return rounds;
 }
 
+function finishEvent(race) {
+  const count = sprintSchedule(race.laps, race.track, race.sprintEvery, race.sprintCount).length;
+  return race.events.findLast(event => event.kind === "finish" &&
+    (race.type !== "points" || event.sprintCount === undefined || event.sprintCount === count));
+}
 function standings(race) {
-  const finish = race.events.findLast(event => event.kind === "finish")?.bibs || [];
+  const finish = finishEvent(race)?.bibs || [];
   const removed = race.events.filter(event => event.kind === "out").map(event => event.bibs[0]);
   const lapped = new Set(race.events.filter(event => ["lapped", "retired"].includes(event.kind)).flatMap(event => event.bibs));
   const riders = race.roster.map(rider => ({
-    ...rider, points: 0, sprintPoints: [], gainPoints: 0, lossPoints: 0, lastChange: 0, lapsGained: 0, eliminated: removed.includes(rider.bib), lapped: lapped.has(rider.bib), rank: null
+    ...rider, startingPoints: race.omnium ? Number(rider.startPoints || 0) : 0, points: race.omnium ? Number(rider.startPoints || 0) : 0, sprintPoints: [], gainPoints: 0, lossPoints: 0, lastChange: 0, lapsGained: 0, eliminated: removed.includes(rider.bib), lapped: lapped.has(rider.bib), rank: null
   }));
   const byBib = new Map(riders.map(rider => [rider.bib, rider]));
-  const schedule = sprintSchedule(race.laps, race.track, race.sprintEvery);
+  const schedule = sprintSchedule(race.laps, race.track, race.sprintEvery, race.sprintCount);
   const latest = race.events.findLast(event => ["sprint", "plus", "minus"].includes(event.kind));
   for (const event of race.events) {
     if (event.kind === "plus" || event.kind === "minus") {
@@ -303,7 +327,7 @@ function getContext() {
   const rounds = race.events.filter(event => ["sprint", "out", "skip"].includes(event.kind)).length;
   const retired = new Set(race.events.filter(event => ["out", "lapped", "retired"].includes(event.kind)).flatMap(event => event.bibs));
   const remaining = race.roster.length - retired.size;
-  const schedule = sprintSchedule(race.laps, race.track, race.sprintEvery);
+  const schedule = sprintSchedule(race.laps, race.track, race.sprintEvery, race.sprintCount);
   return { points, scratch, round: rounds + 1, remaining, schedule, ended: points ? rounds >= schedule.length : race.events.some(event => event.kind === "finish") };
 }
 
@@ -325,17 +349,19 @@ function signedPoints(value) {
 }
 
 function pointsHeaders(schedule) {
-  return ["名次", "背號", "姓名／隊伍", "總分", "本次增減",
+  return ["名次", "背號", "姓名／隊伍", race.omnium ? "全能合計" : "總分", "本次增減",
+    ...(race.omnium ? ["賽前積分", "本場得分"] : []),
     ...schedule.map((lap, index) => "S" + (index + 1) + (index === schedule.length - 1 ? " ×2" : "")),
     "套圈加分", "落後扣分", "圈分合計", "終點順序", "狀態"];
 }
 
 function pointsValues(rider, schedule, events) {
-  const finish = events.findLast(event => event.kind === "finish")?.bibs || [];
+  const finish = finishEvent({ ...race, events })?.bibs || [];
   const finalSprint = events.find(event => event.kind === "sprint" && event.round === schedule.length)?.bibs || [];
   const finishOrder = [...finalSprint, ...finish.filter(bib => !finalSprint.includes(bib))];
   const place = finishOrder.indexOf(rider.bib);
   return [rider.lapped ? "DNF" : rider.rank ?? "同分", rider.bib, rider.name || "", rider.points, signedPoints(rider.lastChange),
+    ...(race.omnium ? [rider.startingPoints, rider.points - rider.startingPoints] : []),
     ...schedule.map((lap, index) => {
       const event = events.find(event => ["sprint", "skip"].includes(event.kind) && event.round === index + 1);
       return event?.kind === "skip" ? "待補" : event ? (rider.sprintPoints[index] || 0) : "—";
@@ -345,8 +371,8 @@ function pointsValues(rider, schedule, events) {
 
 function renderResults(riders, context, pending) {
   const { points, schedule, ended } = context;
-  const finalRecorded = race.events.some(event => event.kind === "finish");
-  $("resultTitle").textContent = points ? "全體選手即時積分" : "全體選手即時排名";
+  const finalRecorded = Boolean(finishEvent(race));
+  $("resultTitle").textContent = points ? (race.omnium ? "全能賽即時總積分" : "全體選手即時積分") : "全體選手即時排名";
   if (ended && !pending && (!points || finalRecorded)) $("resultTitle").textContent += "・完賽";
   const latest = race.events.findLast(event => ["sprint", "plus", "minus"].includes(event.kind));
   const changeName = latest?.kind === "sprint" ? "第 " + latest.round + " 次搶分"
@@ -354,12 +380,13 @@ function renderResults(riders, context, pending) {
   $("liveChange").textContent = points
     ? latest ? "最近記錄 · " + changeName + " · " +
       riders.filter(rider => rider.lastChange).map(rider => rider.bib + " " + signedPoints(rider.lastChange)).join("、")
-      : "全員 0 分"
+      : race.omnium ? "已帶入各選手賽前積分" : "全員 0 分"
     : "";
   const headers = points ? pointsHeaders(schedule) : ["名次", "背號", "姓名／隊伍", "得圈／狀態"];
+  const sprintOffset = race.omnium ? 7 : 5;
   $("resultHead").innerHTML = "<tr>" + headers.map((label, index) =>
     '<th scope="col"' + (index === 2 ? ' class="identity"' : "") +
-    (points && index >= 5 && index < 5 + schedule.length ? ' title="完成第 ' + schedule[index - 5] + ' 圈搶分"' : "") +
+    (points && index >= sprintOffset && index < sprintOffset + schedule.length ? ' title="第 ' + (index - sprintOffset + 1) + ' 次搶分"' : "") +
     ">" + escapeHtml(label) + "</th>").join("") + "</tr>";
   $("result").innerHTML = riders.map(rider => {
     const values = points ? pointsValues(rider, schedule, race.events)
@@ -459,12 +486,13 @@ function render() {
   const onTrack = new Set(riders.filter(rider => !rider.eliminated && !rider.lapped).map(rider => rider.bib));
   const pending = race.events.some(event => event.kind === "skip") && points;
   const labelsByMode = { round: scratch ? "終點順序" : points ? "搶分 · 依序選前四名" : "選擇淘汰選手", plus: "套圈 · 選擇選手", minus: "被套圈 · 繼續比賽", retired: "退場 DNF · 選擇選手", finish: "終點順序" };
+  $("scoringOpen").hidden = !points;
   $("raceInfo").textContent = race.name + "・" + labels[race.type] + "・" + race.track + " m";
   $("next").textContent = points
-    ? (ended ? "已記到終點" : "下一次衝刺 · 剩 " + (race.laps - schedule[round - 1]) + " 圈")
+    ? (ended ? "已記到終點" : (schedule[round - 1] === null ? "下一次搶分 · 第 " + round + "／" + schedule.length + " 次" : "下一次衝刺 · 剩 " + (race.laps - schedule[round - 1]) + " 圈"))
     : (ended ? (scratch ? "已記到終點" : "淘汰賽已結束") : "剩 " + remaining + " 人");
   $("instruction").textContent = points
-    ? (ended ? (pending ? "有待補的衝刺紀錄" : "可補登終點順序") : "第 " + round + " 次衝刺 · 完成第 " + schedule[round - 1] + " 圈")
+    ? (ended ? (pending ? "有待補的衝刺紀錄" : "可補登終點順序") : (schedule[round - 1] === null ? "依現場規程搶分 · 最後一次雙倍" : "第 " + round + " 次衝刺 · 完成第 " + schedule[round - 1] + " 圈"))
     : scratch ? (ended ? "已記錄終點順序" : "終點依序點選完賽選手")
     : (ended ? "已記錄決勝順序" : remaining === 2 ? "最後兩人決勝" : "第 " + round + " 輪 · 每 " + (race.eliminationEvery || (race.track === "250" ? 2 : 1)) + " 圈淘汰");
   const lapsOnBoard = lapCount();
@@ -547,7 +575,7 @@ $("confirm").onclick = () => {
   }
   const kind = mode === "round" ? points ? "sprint" : scratch || remaining === 2 ? "finish" : "out" : mode;
   if (kind === "finish") race.events = race.events.filter(event => event.kind !== "finish");
-  record({ kind, round, bibs: selected });
+  record({ kind, round, bibs: selected, ...(kind === "finish" && points ? { sprintCount: getContext().schedule.length } : {}) });
 };
 $("clear").onclick = () => changeMode("round");
 $("undo").onclick = () => {
@@ -561,7 +589,7 @@ $("minus").onclick = () => changeMode("minus");
 $("retire").onclick = () => changeMode("retired");
 $("finishMode").onclick = () => {
   changeMode("finish");
-  const final = race.events.findLast(event => event.kind === "finish");
+  const final = finishEvent(race);
   selected = final ? [...final.bibs] : [];
   render();
 };
@@ -612,6 +640,7 @@ function addRosterRow(rider = {}) {
   row.innerHTML = fields.map(([key, label]) => '<td><input type="text" aria-label="' + label +
     '" maxlength="' + (key === "bib" ? 5 : 80) + '"' + (key === "bib" ? ' inputmode="numeric"' : '') +
     ' value="' + escapeHtml(rider[key] || "") + '"></td>').join("") +
+    '<td class="starting-cell"' + (setupType === "points" && $("setupOmnium").checked ? "" : " hidden") + '><input type="number" step="1" aria-label="賽前積分" value="' + escapeHtml(rider.startPoints ?? 0) + '"></td>' +
     '<td><button type="button" class="remove-rider">移除</button></td>';
   row.querySelector("button").onclick = () => row.remove();
   $("rosterRows").append(row);
@@ -645,6 +674,9 @@ document.querySelectorAll("[data-discipline]").forEach(button => {
     $("setupForm").reset();
     $("setupTitle").textContent = labels[setupType] + "・選手名單";
     $("lapsField").hidden = $("laps").disabled = setupType === "elimination";
+    $("pointsSetup").hidden = setupType !== "points";
+    $("setupSprintCount").value = sprintSchedule(Number($("laps").value), $("track").value).length;
+    $("startingHeader").hidden = true;
     $("pasteDetails").open = false;
     $("setupError").textContent = "";
     fillRoster(Array.from({ length: 4 }, () => ({})));
@@ -672,17 +704,81 @@ $("pasteRoster").onclick = () => {
 $("setupForm").onsubmit = event => {
   event.preventDefault();
   try {
-    const rows = Array.from($("rosterRows").rows, row => Array.from(row.querySelectorAll("input"), field => field.value));
-    const roster = parseRosterRows(rows);
+    const inputRows = Array.from($("rosterRows").rows, row => Array.from(row.querySelectorAll("input"), field => field.value));
+    const roster = parseRosterRows(inputRows.map(row => row.slice(0, 4)));
+    const omnium = setupType === "points" && $("setupOmnium").checked;
+    const count = setupType === "points" ? validSprintCount($("setupSprintCount").value) : undefined;
+    const bases = new Map(inputRows.filter(row => row[0].trim()).map(row => [row[0].trim(), omnium ? validStartingPoints(row[4]) : 0]));
+    for (const rider of roster) rider.startPoints = bases.get(rider.bib) || 0;
     const min = setupType === "points" ? 4 : 2;
     if (roster.length < min || roster.length > 40) throw new Error(labels[setupType] + "需要 " + min + "–40 位選手。");
     const trackLength = validTrackLength($("track").value);
     if (race && !window.confirm("開始新賽事將取代本裝置的現有賽事。確定繼續？")) return;
     race = { name: $("raceName").value.trim() || labels[setupType], type: setupType,
-      track: String(trackLength), laps: Number($("laps").value), roster, events: [] };
+      track: String(trackLength), laps: Number($("laps").value), roster, events: [], omnium, sprintCount: count };
     persist();
     showRace();
   } catch (error) { $("setupError").textContent = error.message; }
+};
+function validSprintCount(value) {
+  const count = Number(value);
+  if (!Number.isSafeInteger(count) || count < 1 || count > 1000) throw new Error("搶分次數請輸入 1–1000 的整數，包含最後一次雙倍分。");
+  return count;
+}
+function validStartingPoints(value) {
+  const score = Number(String(value ?? "").trim() || 0);
+  if (!Number.isSafeInteger(score)) throw new Error("賽前積分請輸入整數。");
+  return score;
+}
+function applyScoringSettings(countValue, omnium, starting) {
+  const count = validSprintCount(countValue);
+  const lastRecorded = Math.max(0, ...race.events.filter(event => ["sprint", "skip"].includes(event.kind)).map(event => event.round));
+  if (count < lastRecorded) throw new Error("已記錄到第 " + lastRecorded + " 次，請先撤銷超出新次數的搶分紀錄。");
+  const roster = race.roster.map(rider => ({ ...rider, startPoints: validStartingPoints(starting[rider.bib] ?? rider.startPoints) }));
+  const previousCount = sprintSchedule(race.laps, race.track, race.sprintEvery, race.sprintCount).length;
+  if (count !== previousCount) {
+    race.events = race.events.map(event => event.kind === "finish" && event.sprintCount === undefined
+      ? { ...event, sprintCount: previousCount } : event);
+  }
+  race.roster = roster;
+  race.omnium = Boolean(omnium);
+  race.sprintCount = count;
+  persist();
+  changeMode("round");
+}
+function previewSprintCount() {
+  const count = Number($("editSprintCount").value);
+  $("sprintPreview").textContent = Number.isSafeInteger(count) && count >= 1 && count <= 1000
+    ? (count === 1 ? "S1 ×2" : "S1 … S" + (count - 1) + "（一般分） · S" + count + " ×2")
+    : "請輸入正整數次數。";
+}
+$("setupOmnium").onchange = () => {
+  $("startingHeader").hidden = !$("setupOmnium").checked;
+  document.querySelectorAll("#rosterRows .starting-cell").forEach(cell => { cell.hidden = !$("setupOmnium").checked; });
+};
+$("scoringOpen").onclick = () => {
+  $("editSprintCount").value = sprintSchedule(race.laps, race.track, race.sprintEvery, race.sprintCount).length;
+  $("editOmnium").checked = Boolean(race.omnium);
+  $("startingEditor").hidden = !race.omnium;
+  $("scoringError").textContent = "";
+  $("startingRows").innerHTML = race.roster.map(rider => '<tr><td>' + escapeHtml(rider.bib) + '</td><td>' +
+    escapeHtml(rider.name || "—") + '<small style="display:block">' + escapeHtml(rider.team || rider.country || "") +
+    '</small></td><td><input type="number" step="1" style="width:110px" aria-label="背號 ' + escapeHtml(rider.bib) +
+    ' 賽前積分" data-start-bib="' + escapeHtml(rider.bib) + '" value="' + escapeHtml(rider.startPoints ?? 0) + '"></td></tr>').join("");
+  previewSprintCount();
+  $("scoringDialog").showModal();
+};
+$("editOmnium").onchange = () => { $("startingEditor").hidden = !$("editOmnium").checked; };
+$("editSprintCount").oninput = previewSprintCount;
+$("sprintCountMinus").onclick = () => { $("editSprintCount").value = Math.max(1, Number($("editSprintCount").value) - 1); previewSprintCount(); };
+$("sprintCountPlus").onclick = () => { $("editSprintCount").value = Math.min(1000, Number($("editSprintCount").value) + 1); previewSprintCount(); };
+$("scoringForm").onsubmit = event => {
+  event.preventDefault();
+  try {
+    const starting = Object.fromEntries(Array.from($("startingRows").querySelectorAll("input"), input => [input.dataset.startBib, input.value]));
+    applyScoringSettings($("editSprintCount").value, $("editOmnium").checked, starting);
+    $("scoringDialog").close();
+  } catch (error) { $("scoringError").textContent = error.message; }
 };
 function validTrackLength(value) {
   const length = Number(String(value).trim());
@@ -735,7 +831,7 @@ function csvCell(value) {
 
 $("export").onclick = () => {
   const points = race.type === "points";
-  const schedule = sprintSchedule(race.laps, race.track, race.sprintEvery);
+  const schedule = sprintSchedule(race.laps, race.track, race.sprintEvery, race.sprintCount);
   const rows = [points ? [...pointsHeaders(schedule).slice(0, 3), "隊伍／學校", "國家／地區", ...pointsHeaders(schedule).slice(3)]
     : ["名次", "背號", "姓名", "隊伍／學校", "國家／地區", "得圈／狀態"]];
   for (const rider of standings(race)) {
