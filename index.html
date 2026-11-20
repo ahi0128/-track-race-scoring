@@ -85,7 +85,7 @@ header{margin-bottom:12px}
     <h2 id="chooseTitle" tabindex="-1">選擇賽制</h2>
     <div class="disciplines">
       <button type="button" data-discipline="points">領先計分</button>
-      <button type="button" data-discipline="scratch">集體出發</button><button type="button" data-discipline="tempo">Tempo Race</button>
+      <button type="button" data-discipline="scratch">集體出發</button><button type="button" data-discipline="tempo">Tempo Race</button><button type="button" data-discipline="madison">美式接力（Madison）</button>
       <button type="button" data-discipline="elimination">落後淘汰</button>
     </div>
     <div id="resumeRow" class="actions resume" hidden><button type="button" id="resumeRace">繼續本場</button><span id="resumeName" class="meta"></span></div>
@@ -93,6 +93,7 @@ header{margin-bottom:12px}
   <form id="setupForm" hidden>
     <div class="section-head"><h2 id="setupTitle" tabindex="-1"></h2><button type="button" id="backToTypes">返回賽制選擇</button></div>
     <div class="fields"><label>賽事名稱<input id="raceName" maxlength="70" placeholder="選填"></label><label>每圈長度（m）<input id="track" type="number" inputmode="decimal" min="0.01" step="any" value="250" list="trackSizes" required><datalist id="trackSizes"><option value="250"><option value="333"><option value="333.33"><option value="400"><option value="500"></datalist></label><label id="lapsField">總圈數<input type="number" id="laps" min="1" max="400" value="40" required></label></div>
+    <div id="madisonSetup" hidden><h2>美式接力計分設定</h2><div class="fields"><label>搶分安排<select id="setupMadisonMode"><option value="interval">依圈距安排</option><option value="count">自訂搶分次數</option></select></label><label>每幾圈搶分<input id="setupMadisonEvery" type="number" min="1" step="1" value="10"></label><label>自訂次數（含末次）<input id="setupMadisonCount" type="number" min="1" max="1000" step="1" value="4"></label><label>第 1 隊得分<input id="setupMadisonP0" type="number" min="0" step="1" value="5"></label><label>第 2 隊得分<input id="setupMadisonP1" type="number" min="0" step="1" value="3"></label><label>第 3 隊得分<input id="setupMadisonP2" type="number" min="0" step="1" value="2"></label><label>第 4 隊得分<input id="setupMadisonP3" type="number" min="0" step="1" value="1"></label><label>套圈加分<input id="setupMadisonGain" type="number" min="0" step="1" value="20"></label><label>被套圈扣分<input id="setupMadisonLoss" type="number" min="0" step="1" value="20"></label></div><label style="display:flex;gap:8px;align-items:center"><input id="setupMadisonDouble" type="checkbox" checked>末次搶分加倍</label><p class="meta">每隊填一列：隊號、隊伍、選手一、選手二、國家。依圈距模式從末次搶分往前安排，多出的圈數放在第一段。</p></div>
     <div id="tempoSetup" hidden><h2>Tempo 計分設定</h2><div class="fields"><label>第一個搶分圈<input id="setupTempoFirst" type="number" min="1" step="1" value="5"></label><label>搶分間隔（圈）<input id="setupTempoEvery" type="number" min="1" step="1" value="1"></label><label>第一名得分<input id="setupTempoWin" type="number" min="1" step="1" value="1"></label><label>套圈加分<input id="setupTempoGain" type="number" min="0" step="1" value="20"></label><label>落後一圈扣分<input id="setupTempoLoss" type="number" min="0" step="1" value="20"></label></div><p class="meta">預設第五圈開始，每圈第一名 1 分；末圈不加倍。總圈數請填於上方。</p></div>
     <div id="pointsSetup" hidden>
       <label>搶分次數（含最後一次雙倍分）<input id="setupSprintCount" type="number" min="1" max="1000" step="1" value="4"></label>
@@ -171,6 +172,12 @@ header{margin-bottom:12px}
     </div>
   </div>
 </dialog>
+<dialog id="madisonDialog" aria-labelledby="madisonTitle" style="width:min(850px,96vw)"><form id="madisonForm">
+<div class="section-head"><h2 id="madisonTitle">美式接力設定</h2><button type="button" data-close="madisonDialog">取消</button></div>
+<label>總圈數<input id="editMadisonLaps" type="number" min="1" max="1000" step="1" required></label><div class="fields"><label>搶分安排<select id="editMadisonMode"><option value="interval">依圈距安排</option><option value="count">自訂搶分次數</option></select></label><label>每幾圈搶分<input id="editMadisonEvery" type="number" min="1" step="1" value="10"></label><label>自訂次數（含末次）<input id="editMadisonCount" type="number" min="1" max="1000" step="1" value="4"></label><label>第 1 隊得分<input id="editMadisonP0" type="number" min="0" step="1" value="5"></label><label>第 2 隊得分<input id="editMadisonP1" type="number" min="0" step="1" value="3"></label><label>第 3 隊得分<input id="editMadisonP2" type="number" min="0" step="1" value="2"></label><label>第 4 隊得分<input id="editMadisonP3" type="number" min="0" step="1" value="1"></label><label>套圈加分<input id="editMadisonGain" type="number" min="0" step="1" value="20"></label><label>被套圈扣分<input id="editMadisonLoss" type="number" min="0" step="1" value="20"></label></div><label style="display:flex;gap:8px;align-items:center"><input id="editMadisonDouble" type="checkbox" checked>末次搶分加倍</label>
+<p class="meta">以隊伍總分排名，同分以最後搶分／終點順序判定。修改分值會重算已記錄積分。已記錄搶分後，不可直接改換安排模式或圈距；縮減次數需先撤銷超出的紀錄。</p>
+<p id="madisonError" class="note" role="status"></p><button class="primary" type="submit">儲存美式接力設定</button>
+</form></dialog>
 <dialog id="tempoDialog" aria-labelledby="tempoTitle" style="width:min(800px,96vw)"><form id="tempoForm">
 <div class="section-head"><h2 id="tempoTitle">Tempo 計分設定</h2><button type="button" data-close="tempoDialog">取消</button></div>
 <label>總圈數<input id="editTempoLaps" type="number" min="1" max="1000" step="1" required></label><div class="fields"><label>第一個搶分圈<input id="editTempoFirst" type="number" min="1" step="1" value="5"></label><label>搶分間隔（圈）<input id="editTempoEvery" type="number" min="1" step="1" value="1"></label><label>第一名得分<input id="editTempoWin" type="number" min="1" step="1" value="1"></label><label>套圈加分<input id="editTempoGain" type="number" min="0" step="1" value="20"></label><label>落後一圈扣分<input id="editTempoLoss" type="number" min="0" step="1" value="20"></label></div>
@@ -214,7 +221,7 @@ header{margin-bottom:12px}
 <script>
 "use strict";
 const key = "track-race-scoring-v1";
-const labels = { points: "領先計分", scratch: "集體出發", tempo: "Tempo Race", elimination: "落後淘汰" };
+const labels = { points: "領先計分", scratch: "集體出發", tempo: "Tempo Race", madison: "美式接力（Madison）", elimination: "落後淘汰" };
 const $ = id => document.getElementById(id);
 const demoNames = [
   "林昱安", "陳語晴", "張柏睿", "黃品妍", "李承恩", "王芷寧", "吳奕辰", "劉書瑤", "蔡彥廷", "許映彤",
@@ -249,6 +256,7 @@ try {
 } catch {}
 let selected = [];
 let setupType = "";
+let madisonEveryTouched = false;
 let mode = "round";
 let editIndex = null;
 let saved = true;
@@ -263,10 +271,23 @@ function sprintSchedule(laps, track, sprintEvery, count) {
   return rounds;
 }
 
+function defaultMadisonEvery(track) {
+  const meters = Number(track);
+  return meters < 333.33 ? 10 : meters <= 333.34 ? 8 : 5;
+}
+function madisonConfig(race) {
+  return { mode: "interval", every: defaultMadisonEvery(race.track), count: 4,
+    awards: [5, 3, 2, 1], gain: 20, loss: 20, double: true, ...race.madison };
+}
+function finalMultiplier(race) { return race.type === "madison" && !madisonConfig(race).double ? 1 : 2; }
 function tempoConfig(race) {
   return { first: 5, every: 1, win: 1, gain: 20, loss: 20, ...race.tempo };
 }
 function raceSchedule(race) {
+  if (race.type === "madison") {
+    const settings = madisonConfig(race);
+    return sprintSchedule(race.laps, race.track, settings.every, settings.mode === "count" ? settings.count : undefined);
+  }
   if (race.type === "tempo") {
     const settings = tempoConfig(race);
     const rounds = [];
@@ -279,7 +300,7 @@ function raceSchedule(race) {
 function finishEvent(race) {
   const count = raceSchedule(race).length;
   return race.events.findLast(event => event.kind === "finish" &&
-    (!["points", "tempo"].includes(race.type) || event.sprintCount === undefined || event.sprintCount === count));
+    (!["points", "tempo", "madison"].includes(race.type) || event.sprintCount === undefined || event.sprintCount === count));
 }
 function standings(race) {
   const finish = finishEvent(race)?.bibs || [];
@@ -290,6 +311,8 @@ function standings(race) {
   }));
   const tempo = race.type === "tempo";
   const tempoRules = tempoConfig(race);
+  const madison = race.type === "madison";
+  const madisonRules = madisonConfig(race);
   const byBib = new Map(riders.map(rider => [rider.bib, rider]));
   const schedule = raceSchedule(race);
   const latest = race.events.findLast(event => ["sprint", "plus", "minus"].includes(event.kind));
@@ -299,7 +322,8 @@ function standings(race) {
         const rider = byBib.get(bib);
         if (race.type === "scratch") rider.lapsGained += event.kind === "plus" ? 1 : -1;
         else {
-          const value = event.kind === "plus" ? (tempo ? tempoRules.gain : 20) : -(tempo ? tempoRules.loss : 20);
+          const value = event.kind === "plus" ? (tempo ? tempoRules.gain : madison ? madisonRules.gain : 20) : -(tempo ? tempoRules.loss : madison ? madisonRules.loss : 20);
+          if (madison) rider.lapsGained += event.kind === "plus" ? 1 : -1;
           rider.points += value;
           if (value > 0) rider.gainPoints += value;
           else rider.lossPoints += value;
@@ -308,10 +332,10 @@ function standings(race) {
       }
     }
     if (event.kind === "sprint") {
-      const multiplier = !tempo && event.round === schedule.length ? 2 : 1;
+      const multiplier = !tempo && event.round === schedule.length ? finalMultiplier(race) : 1;
       event.bibs.forEach((bib, index) => {
         const rider = byBib.get(bib);
-        const value = tempo ? (index === 0 ? tempoRules.win : 0) : [5, 3, 2, 1][index] * multiplier;
+        const value = tempo ? (index === 0 ? tempoRules.win : 0) : (madison ? madisonRules.awards : [5, 3, 2, 1])[index] * multiplier;
         rider.points += value;
         rider.sprintPoints[event.round - 1] = value;
         if (event === latest) rider.lastChange += value;
@@ -321,7 +345,7 @@ function standings(race) {
   const finalSprint = race.events.find(event => event.kind === "sprint" && event.round === schedule.length)?.bibs || [];
   const order = [...finalSprint, ...finish.filter(bib => !finalSprint.includes(bib))];
   const position = bib => order.includes(bib) ? order.indexOf(bib) : Infinity;
-  if (["points", "tempo"].includes(race.type)) {
+  if (["points", "tempo", "madison"].includes(race.type)) {
     riders.sort((a, b) => Number(a.lapped) - Number(b.lapped) || b.points - a.points || position(a.bib) - position(b.bib) || a.bib.localeCompare(b.bib, "zh-Hant", { numeric: true }));
     riders.forEach((rider, index) => {
       const unresolvedTie = !Number.isFinite(position(rider.bib)) && riders.some(other => !other.lapped && other !== rider && other.points === rider.points && !Number.isFinite(position(other.bib)));
@@ -344,14 +368,15 @@ function standings(race) {
 }
 
 function getContext() {
-  const points = ["points", "tempo"].includes(race.type);
+  const points = ["points", "tempo", "madison"].includes(race.type);
   const scratch = race.type === "scratch";
   const tempo = race.type === "tempo";
+  const madison = race.type === "madison";
   const rounds = race.events.filter(event => ["sprint", "out", "skip"].includes(event.kind)).length;
   const retired = new Set(race.events.filter(event => ["out", "lapped", "retired"].includes(event.kind)).flatMap(event => event.bibs));
   const remaining = race.roster.length - retired.size;
   const schedule = raceSchedule(race);
-  return { points, scratch, tempo, round: rounds + 1, remaining, schedule, ended: points ? rounds >= schedule.length : race.events.some(event => event.kind === "finish") };
+  return { points, scratch, tempo, madison, round: rounds + 1, remaining, schedule, ended: points ? rounds >= schedule.length : race.events.some(event => event.kind === "finish") };
 }
 
 function escapeHtml(value) {
@@ -372,10 +397,10 @@ function signedPoints(value) {
 }
 
 function pointsHeaders(schedule) {
-  return ["名次", "背號", "姓名／隊伍", race.omnium ? "全能合計" : "總分", "本次增減",
+  return ["名次", race.type === "madison" ? "隊號" : "背號", race.type === "madison" ? "兩位選手／隊伍" : "姓名／隊伍", race.omnium ? "全能合計" : "總分", "本次增減",
     ...(race.omnium ? ["賽前積分", "本場得分"] : []),
-    ...schedule.map((lap, index) => race.type === "tempo" ? "L" + lap : "S" + (index + 1) + (index === schedule.length - 1 ? " ×2" : "")),
-    "套圈加分", "落後扣分", "圈分合計", "終點順序", "狀態"];
+    ...schedule.map((lap, index) => race.type === "tempo" ? "L" + lap : "S" + (index + 1) + (index === schedule.length - 1 && finalMultiplier(race) === 2 ? " ×2" : "")),
+    "套圈加分", "落後扣分", "圈分合計", ...(race.type === "madison" ? ["淨套圈"] : []), "終點順序", "狀態"];
 }
 
 function pointsValues(rider, schedule, events) {
@@ -389,13 +414,13 @@ function pointsValues(rider, schedule, events) {
       const event = events.find(event => ["sprint", "skip"].includes(event.kind) && event.round === index + 1);
       return event?.kind === "skip" ? "待補" : event ? (rider.sprintPoints[index] || 0) : "—";
     }), signedPoints(rider.gainPoints), signedPoints(rider.lossPoints),
-    signedPoints(rider.gainPoints + rider.lossPoints), place >= 0 ? place + 1 : "—", rider.lapped ? "退場 DNF" : "在場／完賽"];
+    signedPoints(rider.gainPoints + rider.lossPoints), ...(race.type === "madison" ? [signedPoints(rider.lapsGained)] : []), place >= 0 ? place + 1 : "—", rider.lapped ? "退場 DNF" : "在場／完賽"];
 }
 
 function renderResults(riders, context, pending) {
   const { points, schedule, ended } = context;
   const finalRecorded = Boolean(finishEvent(race));
-  $("resultTitle").textContent = points ? (race.type === "tempo" ? "Tempo 單項即時積分" : race.omnium ? "全能賽即時總積分" : "全體選手即時積分") : "全體選手即時排名";
+  $("resultTitle").textContent = points ? (race.type === "madison" ? "美式接力隊伍即時積分" : race.type === "tempo" ? "Tempo 單項即時積分" : race.omnium ? "全能賽即時總積分" : "全體選手即時積分") : "全體選手即時排名";
   if (ended && !pending && (!points || finalRecorded)) $("resultTitle").textContent += "・完賽";
   const latest = race.events.findLast(event => ["sprint", "plus", "minus"].includes(event.kind));
   const changeName = latest?.kind === "sprint" ? "第 " + latest.round + " 次搶分"
@@ -504,13 +529,15 @@ function changeLapCount(delta) {
 
 function render() {
   const context = getContext();
-  const { points, scratch, tempo, round, schedule, remaining, ended } = context;
+  const { points, scratch, tempo, madison, round, schedule, remaining, ended } = context;
   const riders = standings(race);
   const onTrack = new Set(riders.filter(rider => !rider.eliminated && !rider.lapped).map(rider => rider.bib));
   const pending = race.events.some(event => event.kind === "skip") && points;
-  const labelsByMode = { round: scratch ? "終點順序" : points ? (tempo ? "本圈搶分 · 選擇第一名" : "搶分 · 依序選前四名") : "選擇淘汰選手", plus: "套圈 · 選擇選手", minus: "被套圈 · 繼續比賽", retired: "退場 DNF · 選擇選手", finish: "終點順序" };
+  const labelsByMode = { round: scratch ? "終點順序" : points ? (madison ? "搶分 · 依序選前 " + Math.min(4, remaining) + " 隊" : tempo ? "本圈搶分 · 選擇第一名" : "搶分 · 依序選前四名") : "選擇淘汰選手", plus: "套圈 · 選擇選手", minus: "被套圈 · 繼續比賽", retired: "退場 DNF · 選擇選手", finish: "終點順序" };
   $("scoringOpen").hidden = !points;
-  $("scoringOpen").textContent = tempo ? "Tempo 設定" : "計分設定";
+  $("scoringOpen").textContent = madison ? "接力設定" : tempo ? "Tempo 設定" : "計分設定";
+  $("ridersTitle").textContent = madison ? "點選隊伍" : "點選選手";
+  $("retire").textContent = madison ? "全隊退場 DNF" : "退場 DNF";
   $("raceInfo").textContent = race.name + "・" + labels[race.type] + "・" + race.track + " m";
   $("next").textContent = points
     ? (ended ? "已記到終點" : (schedule[round - 1] === null ? "下一次搶分 · 第 " + round + "／" + schedule.length + " 次" : "下一次衝刺 · 剩 " + (race.laps - schedule[round - 1]) + " 圈"))
@@ -524,12 +551,19 @@ function render() {
     $("instruction").textContent = ended ? (pending ? "有待補紀錄，請確認並補登終點順序" : "請補登終點順序，作為同分判定依據")
       : "第 " + round + "／" + schedule.length + " 次 · 第一名 " + tempoConfig(race).win + " 分 · 末圈不加倍";
   }
+  if (madison) {
+    $("instruction").textContent = ended ? (pending ? "有待補紀錄，請確認並補登終點隊伍順序" : "可補登終點隊伍順序")
+      : "第 " + round + "／" + schedule.length + " 次 · " + (schedule[round - 1] === null ? "依現場規程搶分" : "完成第 " + schedule[round - 1] + " 圈")
+        + " · 末次" + (madisonConfig(race).double ? "加倍" : "不加倍");
+    labelsByMode.plus = "套圈 · 選擇隊伍";
+    labelsByMode.retired = "全隊退場 DNF · 選擇隊伍";
+  }
   const lapsOnBoard = lapCount();
   $("lapLabel").textContent = points || scratch ? "現場剩餘" : "已騎圈數";
   $("lapInput").value = lapsOnBoard;
   $("lapDecrease").disabled = lapsOnBoard === 0;
   $("lapIncrease").disabled = false;
-  $("fieldCount").textContent = race.roster.length + " 人名單";
+  $("fieldCount").textContent = race.roster.length + (madison ? " 隊名單" : " 人名單");
   $("selectionTitle").textContent = editIndex === null ? labelsByMode[mode] : "補記第 " + race.events[editIndex].round + " 次衝刺";
   $("picked").textContent = selected.length ? selected.map(bib => {
     const rider = race.roster.find(rider => rider.bib === bib);
@@ -541,7 +575,7 @@ function render() {
     const order = selected.indexOf(rider.bib);
     button.type = "button"; button.className = "rider"; button.disabled = !picking || !onTrack.has(rider.bib);
     button.setAttribute("aria-pressed", String(order >= 0));
-    button.innerHTML = "<strong>" + escapeHtml(rider.bib) + "</strong><span>" + escapeHtml(rider.name || "　") + "</span>" + (order >= 0 ? "<i>" + (order + 1) + "</i>" : "");
+    button.innerHTML = "<strong>" + escapeHtml(rider.bib) + "</strong><span>" + escapeHtml(rider.name || "　") + "</span>" + (madison ? "<span>" + escapeHtml(rider.team || "") + "</span>" : "") + (order >= 0 ? "<i>" + (order + 1) + "</i>" : "");
     button.addEventListener("click", () => pick(rider.bib, context));
     return button;
   }));
@@ -549,8 +583,8 @@ function render() {
   $("roundMode").textContent = tempo ? "本圈第一名" : points ? "搶分" : scratch ? "終點順序" : "淘汰";
   $("roundMode").disabled = ended;
   $("roundMode").setAttribute("aria-pressed", String(mode === "round"));
-  $("plus").textContent = scratch ? "套圈 ＋1 圈" : "套圈 ＋" + (tempo ? tempoConfig(race).gain : 20);
-  $("minus").textContent = scratch ? "被套圈 −1 圈" : "被套圈 −" + (tempo ? tempoConfig(race).loss : 20);
+  $("plus").textContent = scratch ? "套圈 ＋1 圈" : "套圈 ＋" + (tempo ? tempoConfig(race).gain : madison ? madisonConfig(race).gain : 20);
+  $("minus").textContent = scratch ? "被套圈 −1 圈" : "被套圈 −" + (tempo ? tempoConfig(race).loss : madison ? madisonConfig(race).loss : 20);
   $("retire").disabled = ended;
   $("retire").setAttribute("aria-pressed", String(mode === "retired"));
   $("plus").disabled = $("minus").disabled = ended;
@@ -565,9 +599,9 @@ function render() {
   $("clear").disabled = editIndex === null && mode === "round" && !selected.length;
   $("clear").textContent = editIndex !== null || mode !== "round" ? "取消" : "清除本次點選";
   $("undo").disabled = !race.events.length;
-  const recordingScratchFinish = (scratch && (mode === "round" || mode === "finish")) || (tempo && mode === "finish");
+  const recordingScratchFinish = (scratch && (mode === "round" || mode === "finish")) || ((tempo || madison) && mode === "finish");
   const needed = recordingScratchFinish ? Math.max(1, remaining)
-    : points && mode === "round" ? (tempo ? 1 : 4) : !points && !scratch && mode === "round" && remaining === 2 ? 2 : 1;
+    : points && mode === "round" ? (tempo ? 1 : madison ? Math.min(4, remaining) : 4) : !points && !scratch && mode === "round" && remaining === 2 ? 2 : 1;
   $("confirm").disabled = selected.length < needed;
   $("saveState").textContent = saved ? "此裝置儲存" : "儲存失敗";
   renderResults(riders, context, pending);
@@ -581,7 +615,7 @@ function riderStatus(rider) {
 }
 
 function pick(bib, context) {
-  const max = mode !== "round" || context.scratch ? race.roster.length : context.tempo ? 1 : context.points ? 4 : context.remaining === 2 ? 2 : 1;
+  const max = mode !== "round" || context.scratch ? race.roster.length : context.tempo ? 1 : context.madison ? Math.min(4, context.remaining) : context.points ? 4 : context.remaining === 2 ? 2 : 1;
   if (selected.includes(bib)) selected = selected.filter(item => item !== bib);
   else if (max === 1) selected = [bib];
   else if (selected.length < max) selected.push(bib);
@@ -623,11 +657,11 @@ $("finishMode").onclick = () => {
   render();
 };
 $("historyOpen").onclick = () => {
-  const names = { sprint: "衝刺", out: "淘汰", plus: "得圈", minus: "被套圈（仍在場）", lapped: "被套圈退場（舊紀錄）", retired: "退場 DNF", finish: "終點", skip: ["points", "tempo"].includes(race.type) ? "待確認" : "無淘汰" };
+  const names = { sprint: "衝刺", out: "淘汰", plus: "得圈", minus: "被套圈（仍在場）", lapped: "被套圈退場（舊紀錄）", retired: "退場 DNF", finish: "終點", skip: ["points", "tempo", "madison"].includes(race.type) ? "待確認" : "無淘汰" };
   $("log").replaceChildren(...race.events.map((event, index) => {
     const item = document.createElement("li");
     item.textContent = (["sprint", "out", "skip"].includes(event.kind) ? "第 " + event.round + " 輪 · " : "") + names[event.kind] + " " + event.bibs.join(" → ");
-    if (["points", "tempo"].includes(race.type) && ["skip", "sprint"].includes(event.kind)) {
+    if (["points", "tempo", "madison"].includes(race.type) && ["skip", "sprint"].includes(event.kind)) {
       const edit = document.createElement("button");
       edit.textContent = event.kind === "skip" ? "補登" : "修改";
       edit.onclick = () => { $("history").close(); changeMode("round"); editIndex = index; selected = [...event.bibs]; render(); };
@@ -664,6 +698,7 @@ $("lapInput").oninput = event => {
 };
 $("lapInput").onkeydown = event => { if (event.key === "Enter") { event.preventDefault(); event.target.blur(); } };
 function addRosterRow(rider = {}) {
+  if (setupType === "madison") return addMadisonRow(rider);
   const row = document.createElement("tr");
   const fields = [["bib", "背號"], ["name", "姓名"], ["team", "隊伍／學校"], ["country", "國家／地區"]];
   row.innerHTML = fields.map(([key, label]) => '<td><input type="text" aria-label="' + label +
@@ -701,6 +736,18 @@ document.querySelectorAll("[data-discipline]").forEach(button => {
   button.onclick = () => {
     setupType = button.dataset.discipline;
     $("setupForm").reset();
+    const isMadison = setupType === "madison";
+    const headers = isMadison ? ["隊號", "隊伍", "選手一", "選手二", "國家／地區"] : ["背號", "姓名", "隊伍／學校", "國家／地區"];
+    document.querySelector(".roster-table thead tr").innerHTML = headers.map(label => '<th scope="col">' + label + '</th>').join("") +
+      '<th scope="col" id="startingHeader" hidden>賽前積分</th><th scope="col">操作</th>';
+    $("madisonSetup").hidden = !isMadison;
+    $("photoOpen").hidden = isMadison;
+    $("addRider").textContent = isMadison ? "新增隊伍" : "新增選手";
+    document.querySelector("#pasteDetails summary").textContent = isMadison ? "貼上 Excel 隊伍名單" : "貼上 Excel 名單";
+    document.querySelector("#pasteDetails label").firstChild.textContent = isMadison ? "每列依序：隊號、隊伍、選手一、選手二、國家／地區" : "依序貼上背號、姓名、隊伍／學校、國家／地區";
+    $("setupMadisonEvery").value = defaultMadisonEvery($("track").value);
+    madisonEveryTouched = false;
+    syncMadisonFields("setupMadison");
     $("setupTitle").textContent = labels[setupType] + "・選手名單";
     $("lapsField").hidden = $("laps").disabled = setupType === "elimination";
     $("pointsSetup").hidden = setupType !== "points";
@@ -719,13 +766,15 @@ $("setupOpen").onclick = () => showSetup(true);
 $("backToTypes").onclick = () => showSetup(true);
 $("resumeRace").onclick = showRace;
 $("addRider").onclick = () => addRosterRow().focus();
-$("demo").onclick = () => fillRoster(demoRoster);
+$("demo").onclick = () => fillRoster(setupType === "madison"
+  ? Array.from({ length: 4 }, (_, index) => ({ bib: String(index + 1).padStart(2, "0"), team: String.fromCharCode(65 + index) + " 隊",
+    members: demoNames.slice(index * 2, index * 2 + 2), country: "" })) : demoRoster);
 $("pasteRoster").onclick = () => {
   try {
     const rows = $("rosterPaste").value.split(/\r?\n/).filter(row => row.trim())
       .map(row => row.split(row.includes("\t") ? "\t" : ","));
-    const roster = parseRosterRows(rows);
-    if (!roster.length || roster.length > 40) throw new Error("請貼上 1–40 位選手。");
+    const roster = setupType === "madison" ? parseMadisonRows(rows) : parseRosterRows(rows);
+    if (!roster.length || roster.length > 40) throw new Error(setupType === "madison" ? "請貼上 1–40 隊。" : "請貼上 1–40 位選手。");
     fillRoster(roster);
     $("setupError").textContent = "";
     $("pasteDetails").open = false;
@@ -735,21 +784,114 @@ $("setupForm").onsubmit = event => {
   event.preventDefault();
   try {
     const inputRows = Array.from($("rosterRows").rows, row => Array.from(row.querySelectorAll("input"), field => field.value));
-    const roster = parseRosterRows(inputRows.map(row => row.slice(0, 4)));
+    const roster = setupType === "madison" ? parseMadisonRows(inputRows) : parseRosterRows(inputRows.map(row => row.slice(0, 4)));
     const omnium = setupType === "points" && $("setupOmnium").checked;
     const count = setupType === "points" ? validSprintCount($("setupSprintCount").value) : undefined;
     const bases = new Map(inputRows.filter(row => row[0].trim()).map(row => [row[0].trim(), omnium ? validStartingPoints(row[4]) : 0]));
     for (const rider of roster) rider.startPoints = bases.get(rider.bib) || 0;
     const min = setupType === "points" ? 4 : 2;
-    if (roster.length < min || roster.length > 40) throw new Error(labels[setupType] + "需要 " + min + "–40 位選手。");
+    if (roster.length < min || roster.length > 40) throw new Error(labels[setupType] + "需要 " + min + (setupType === "madison" ? "–40 隊。" : "–40 位選手。"));
+    const madison = setupType === "madison" ? readMadisonFields("setupMadison", $("laps").value) : undefined;
     const tempo = setupType === "tempo" ? readTempoFields("setupTempo", $("laps").value) : undefined;
     const trackLength = validTrackLength($("track").value);
     if (race && !window.confirm("開始新賽事將取代本裝置的現有賽事。確定繼續？")) return;
     race = { name: $("raceName").value.trim() || labels[setupType], type: setupType,
-      track: String(trackLength), laps: Number($("laps").value), roster, events: [], omnium, sprintCount: count, tempo };
+      track: String(trackLength), laps: Number($("laps").value), roster, events: [], omnium, sprintCount: count, tempo, madison };
     persist();
     showRace();
   } catch (error) { $("setupError").textContent = error.message; }
+};
+function syncMadisonFields(prefix) {
+  const byCount = $(prefix + "Mode").value === "count";
+  $(prefix + "Every").disabled = byCount;
+  $(prefix + "Count").disabled = !byCount;
+}
+$("setupMadisonMode").onchange = () => syncMadisonFields("setupMadison");
+$("editMadisonMode").onchange = () => syncMadisonFields("editMadison");
+$("setupMadisonEvery").oninput = () => { madisonEveryTouched = true; };
+$("track").oninput = () => {
+  if (setupType === "madison" && !madisonEveryTouched) $("setupMadisonEvery").value = defaultMadisonEvery($("track").value);
+};
+function parseMadisonRows(rows) {
+  const members = new Map(), basic = [];
+  rows.forEach((raw, index) => {
+    const cells = raw.map(value => String(value).trim());
+    if (!cells.some(Boolean) || (index === 0 && ["隊號", "隊伍編號"].includes(cells[0]))) return;
+    if (cells.length > 5) throw new Error("隊伍名單每列最多五欄：隊號、隊伍、選手一、選手二、國家。");
+    const [bib, team = "", first = "", second = "", country = ""] = cells;
+    if (!first || !second) throw new Error("隊號 " + (bib || "未填") + " 請填入兩位選手姓名。");
+    members.set(bib, [first, second]);
+    basic.push([bib, first + "／" + second, team, country]);
+  });
+  return parseRosterRows(basic).map(team => ({ ...team, members: members.get(team.bib), startPoints: 0 }));
+}
+function addMadisonRow(team = {}) {
+  const row = document.createElement("tr");
+  const values = [team.bib || "", team.team || "", team.members?.[0] || "", team.members?.[1] || "", team.country || ""];
+  row.innerHTML = ["隊號", "隊伍", "選手一", "選手二", "國家／地區"].map((label, index) =>
+    '<td><input aria-label="' + label + '" type="text" maxlength="' + (index === 0 ? 5 : 80) +
+    '"' + (index === 0 ? ' inputmode="numeric"' : '') + ' value="' + escapeHtml(values[index]) + '"></td>').join("") +
+    '<td><button type="button" class="remove-rider">移除</button></td>';
+  row.querySelector("button").onclick = () => row.remove();
+  $("rosterRows").append(row);
+  return row.querySelector("input");
+}
+function validMadisonSettings(laps, input) {
+  const total = Number(laps);
+  const settings = { mode: input.mode, every: Number(input.every), count: Number(input.count),
+    awards: input.awards.map(Number), gain: Number(input.gain), loss: Number(input.loss), double: Boolean(input.double) };
+  if (!Number.isSafeInteger(total) || total < 1 || total > 1000) throw new Error("總圈數請輸入 1–1000 的整數。");
+  if (!["interval", "count"].includes(settings.mode) || !Number.isSafeInteger(settings.every) || settings.every < 1) throw new Error("搶分圈距請輸入正整數。");
+  if (settings.mode === "count") settings.count = validSprintCount(settings.count);
+  if (settings.awards.length !== 4 || ![...settings.awards, settings.gain, settings.loss].every(value => Number.isSafeInteger(value) && value >= 0)) {
+    throw new Error("各名次得分與套圈加扣分請輸入 0 或正整數。");
+  }
+  return settings;
+}
+function readMadisonFields(prefix, laps) {
+  return validMadisonSettings(laps, { mode: $(prefix + "Mode").value, every: $(prefix + "Every").value,
+    count: $(prefix + "Count").value, awards: [0, 1, 2, 3].map(index => $(prefix + "P" + index).value),
+    gain: $(prefix + "Gain").value, loss: $(prefix + "Loss").value, double: $(prefix + "Double").checked });
+}
+function applyMadisonSettings(laps, input) {
+  const settings = validMadisonSettings(laps, input);
+  const previous = madisonConfig(race);
+  const recorded = race.events.filter(event => ["sprint", "skip"].includes(event.kind));
+  if (recorded.length && (previous.mode !== settings.mode || (settings.mode === "interval" && previous.every !== settings.every))) {
+    throw new Error("已有搶分紀錄，請先撤銷搶分紀錄，再更改安排模式或圈距。");
+  }
+  const proposed = { ...race, laps: Number(laps), madison: settings };
+  const count = raceSchedule(proposed).length;
+  if (recorded.some(event => event.round > count)) throw new Error("新設定會刪除已記錄欄位，請先撤銷超出的搶分紀錄。");
+  const oldSchedule = raceSchedule(race), nextSchedule = raceSchedule(proposed);
+  if (settings.mode === "interval" && recorded.some(event => oldSchedule[event.round - 1] !== nextSchedule[event.round - 1])) {
+    throw new Error("新總圈數會移動已記錄的搶分圈，請先撤銷相關搶分紀錄或保留原總圈數。");
+  }
+  if (oldSchedule.length !== count) race.events = race.events.map(event => event.kind === "finish" && event.sprintCount === undefined ? { ...event, sprintCount: oldSchedule.length } : event);
+  if (race.lapCount === undefined && (race.events.length || race.timer)) race.lapCount = lapCount();
+  race.laps = proposed.laps;
+  race.madison = settings;
+  persist();
+  changeMode("round");
+}
+function openMadisonSettings() {
+  const settings = madisonConfig(race);
+  $("editMadisonLaps").value = race.laps;
+  $("editMadisonMode").value = settings.mode;
+  $("editMadisonEvery").value = settings.every;
+  $("editMadisonCount").value = settings.mode === "count" ? settings.count : raceSchedule(race).length;
+  settings.awards.forEach((value, index) => { $("editMadisonP" + index).value = value; });
+  $("editMadisonGain").value = settings.gain;
+  $("editMadisonLoss").value = settings.loss;
+  $("editMadisonDouble").checked = settings.double;
+  $("madisonError").textContent = "";
+  syncMadisonFields("editMadison");
+  $("madisonDialog").showModal();
+}
+$("madisonForm").onsubmit = event => {
+  event.preventDefault();
+  try { applyMadisonSettings($("editMadisonLaps").value, readMadisonFields("editMadison", $("editMadisonLaps").value)); $("madisonDialog").close(); }
+  catch (error) { $("madisonError").textContent = error.message; }
 };
 function validTempoSettings(laps, settings) {
   const total = Number(laps);
@@ -834,6 +976,7 @@ $("setupOmnium").onchange = () => {
   document.querySelectorAll("#rosterRows .starting-cell").forEach(cell => { cell.hidden = !$("setupOmnium").checked; });
 };
 $("scoringOpen").onclick = () => {
+  if (race.type === "madison") { openMadisonSettings(); return; }
   if (race.type === "tempo") { openTempoSettings(); return; }
   $("editSprintCount").value = raceSchedule(race).length;
   $("editOmnium").checked = Boolean(race.omnium);
@@ -908,7 +1051,7 @@ function csvCell(value) {
 }
 
 $("export").onclick = () => {
-  const points = ["points", "tempo"].includes(race.type);
+  const points = ["points", "tempo", "madison"].includes(race.type);
   const schedule = raceSchedule(race);
   const rows = [points ? [...pointsHeaders(schedule).slice(0, 3), "隊伍／學校", "國家／地區", ...pointsHeaders(schedule).slice(3)]
     : ["名次", "背號", "姓名", "隊伍／學校", "國家／地區", "得圈／狀態"]];
